@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 
 from confluent_kafka import Consumer, Message
-
 from kafka_consumer_settings import KafkaConsumerSettings
 
 
