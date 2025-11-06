@@ -1,6 +1,6 @@
 # 🆘 Support
 
-Need help with the Cezzis Cocktails RAG Agent? We're here to help! This document provides information about how to get support for the project.
+Need help with Cezzis PyCore? We're here to help! This document provides information about how to get support for the project.
 
 ## 📋 Table of Contents
 
@@ -24,15 +24,15 @@ Before asking for help, please check our documentation:
 
 ### 💬 Ask Questions
 
-If you have questions about using the Cezzis Cocktails RAG Agent:
+If you have questions about using Cezzis PyCore packages:
 
 1. **GitHub Discussions** 💬
-   - [Start a discussion](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/discussions)
+   - [Start a discussion](https://github.com/mtnvencenzo/cezzis-pycore/discussions)
    - Browse existing discussions
    - Best for: General questions, ideas, show-and-tell
 
 2. **GitHub Issues** 🐛
-   - [Create an issue](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new/choose)
+   - [Create an issue](https://github.com/mtnvencenzo/cezzis-pycore/issues/new/choose)
    - Use our issue templates
    - Best for: Bug reports and feature requests
 
@@ -73,7 +73,7 @@ Found a bug? Help us fix it!
 
 ## ✨ Feature Requests
 
-Have an idea for improving the Cezzis Cocktails RAG Agent?
+Have an idea for improving Cezzis PyCore packages?
 
 ### 🧠 Before Requesting
 
@@ -84,10 +84,10 @@ Have an idea for improving the Cezzis Cocktails RAG Agent?
 
 ### 📨 How to Request
 
-1. Use our **[User Story Template](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new?template=user-story-template.md)**
+1. Use our **[User Story Template](https://github.com/mtnvencenzo/cezzis-pycore/issues/new?template=user-story-template.md)**
 2. Provide clear information:
    - What problem does it solve?
-   - Which application(s) would be affected?
+   - Which package(s) would be affected?
    - How would it work?
    - Why is it important?
    - Any implementation ideas?
@@ -116,10 +116,10 @@ Want to contribute code, documentation, or other improvements?
 - ✨ **New features**
 - 📚 **Documentation improvements**
 - 🧪 **Tests**
-- �️ **Infrastructure improvements**
+- 📦 **New packages**
 - 🔧 **Build and tooling**
-- 🎯 **RAG optimization**
-- 📊 **Data pipeline improvements**
+- ⚡ **Performance improvements**
+- � **Kafka integrations**
 
 ### ✅ Approval Process
 
@@ -127,7 +127,7 @@ Want to contribute code, documentation, or other improvements?
 
 ## 🌐 Community
 
-Join our community of cocktail enthusiasts and developers!
+Join our community of Python and distributed systems developers!
 
 ### 📣 Stay Updated
 
@@ -151,26 +151,26 @@ Need professional support or custom development?
 
 ### 🛠️ Services Available
 
-- 🛠️ **Custom Development**
+- 🛠️ **Custom Package Development**
 - 🏗️ **Architecture Consulting**
 - 🎓 **Training and Workshops**
 - 🚀 **Deployment Support**
 - 🔧 **Maintenance Contracts**
-- 🤖 **RAG Solution Optimization**
-- 📊 **Data Pipeline Consulting**
+- 📊 **Kafka Integration Consulting**
+- ⚡ **Performance Optimization**
 
 ## 📊 Project Status
 
 - 🚀 **Status**: Active development
 - 🎯 **Maintainer**: [@mtnvencenzo](https://github.com/mtnvencenzo)
-- 📈 **Roadmap**: See [Issues](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues) and [Projects](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/projects)
+- 📈 **Roadmap**: See [Issues](https://github.com/mtnvencenzo/cezzis-pycore/issues) and [Projects](https://github.com/mtnvencenzo/cezzis-pycore/projects)
 
 ## 🙏 Thank You
 
-Thank you for your interest in the Cezzis Cocktails RAG Agent! Whether you're reporting bugs, suggesting features, or contributing code, your involvement helps make this project better for everyone.
+Thank you for your interest in Cezzis PyCore! Whether you're reporting bugs, suggesting features, or contributing code, your involvement helps make these packages better for everyone.
 
 ---
 
-**Cheers to great cocktails and great code! 🍸**
+**Happy coding! 🐍**
 
-*Last updated: October 2025*
+*Last updated: November 2025*

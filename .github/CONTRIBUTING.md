@@ -1,6 +1,6 @@
-# 🍸 Contributing to Cezzis Cocktails RAG Agent
+# 🐍 Contributing to Cezzis PyCore
 
-Thank you for your interest in contributing to the Cezzis Cocktails RAG Agent! This repository contains multiple applications working in tandem as a RAG (Retrieval-Augmented Generation) solution for the Cezzis.com website. We welcome contributions that help improve data ingestion, vector storage, query processing, and integration with the broader Cezzis.com ecosystem.
+Thank you for your interest in contributing to Cezzis PyCore! This repository contains Python packages for distributed systems and data streaming, with a focus on Kafka integration and message processing. We welcome contributions that help improve package functionality, performance, testing, and documentation.
 
 ## 📋 Table of Contents
 
@@ -9,7 +9,6 @@ Thank you for your interest in contributing to the Cezzis Cocktails RAG Agent! T
 - [Contributing Process](#-contributing-process)
 - [Code Standards](#-code-standards)
 - [Testing](#-testing)
-- [Deployment](#-deployment)
 - [Getting Help](#-getting-help)
 
 ## 🚀 Getting Started
@@ -18,51 +17,51 @@ Thank you for your interest in contributing to the Cezzis Cocktails RAG Agent! T
 
 Before you begin, ensure you have the following installed:
 - Python 3.12+
+- Poetry (for dependency management)
 - Make
-- Docker & Docker Compose
-- Terraform (optional, for IaC under `terraform/`)
+- Docker & Docker Compose (for integration testing)
 - Git
 
 ### 🗂️ Project Structure
 
 ```text
-cezzis-com-cocktails-rag-agent/
-├── data-ingestion/
-│   └── data-extraction-agent/    # Kafka consumer for cocktail data extraction
-│       ├── src/                  # Python application code
-│       ├── test/                 # Unit and integration tests
-│       ├── Dockerfile            # Production container
-│       ├── Dockerfile-CI         # CI/CD container
-│       └── requirements.txt      # Python dependencies
-├── terraform/                    # Infrastructure as Code (Azure)
-└── .github/                      # GitHub workflows and templates
+cezzis-pycore/
+├── kafka-packages/              # Kafka-related Python packages
+│   ├── cezzis_kafka/           # Main package code
+│   │   ├── __init__.py
+│   │   ├── kafka_consumer.py
+│   │   ├── kafka_consumer_settings.py
+│   │   └── ikafka_message_processor.py
+│   ├── test/                   # Unit and integration tests
+│   ├── pyproject.toml          # Poetry configuration
+│   └── makefile                # Development commands
+├── .github/                    # GitHub workflows and templates
+└── README.md                   # Repository documentation
 ```
 
-### 🎯 Applications Overview
+### 🎯 Packages Overview
 
-This repository contains multiple interconnected services:
-- **Data Extraction Agent**: Kafka consumer that processes cocktail data updates
-- _(More services to be added as the RAG solution evolves)_
+This repository contains Python packages for distributed systems:
+- **cezzis-kafka**: Lightweight library for Kafka message production, consumption, and stream processing
+- _(Additional packages may be added as the project evolves)_
 
 ## 💻 Development Setup
 
 1. **Fork and Clone the Repository**
    ```bash
-   git clone https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent.git
-   cd cezzis-com-cocktails-rag-agent
+   git clone https://github.com/mtnvencenzo/cezzis-pycore.git
+   cd cezzis-pycore
    ```
 
-2. **Set Up Data Extraction Agent**
+2. **Set Up Kafka Package**
    ```bash
-   cd data-ingestion/data-extraction-agent
+   cd kafka-packages
    
-   # Create virtual environment
-   python3 -m venv .venv
-   source .venv/bin/activate
+   # Install dependencies using Poetry
+   make install
    
-   # Install dependencies
-   pip install -r requirements.txt
-   pip install -r requirements-dev.txt
+   # Activate virtual environment
+   poetry shell
    ```
 
 3. **Run Tests**
@@ -71,23 +70,23 @@ This repository contains multiple interconnected services:
    make test
    
    # Run with coverage
-   pytest --cov=. --cov-report=term
+   pytest --cov=cezzis_kafka --cov-report=term
    ```
 
-4. **Run Locally**
+4. **Code Quality Checks**
    ```bash
-   # Set environment variables
-   export KAFKA_BOOTSTRAP_SERVERS=localhost:9092
-   export KAFKA_CONSUMER_GROUP=extraction-group
-   export KAFKA_TOPIC_NAME=cocktails-topic
+   # Run ruff linting and formatting
+   make standards
    
-   # Run the application
-   python src/app.py
+   # Or run individually
+   make ruff-check
+   make ruff-format
    ```
 
-5. **Docker Compose (Optional)**
+5. **Build the Package**
    ```bash
-   docker compose up
+   # Build distribution packages
+   poetry build
    ```
 
 ## 🔄 Contributing Process
@@ -117,7 +116,7 @@ This repository contains multiple interconnected services:
 4. **Commit your changes**
    ```bash
    git add .
-   git commit -m "feat(extraction): add new functionality for ..."
+   git commit -m "feat(kafka): add new functionality for ..."
    ```
    
    Use [conventional commit format](https://www.conventionalcommits.org/):
@@ -164,12 +163,12 @@ ruff format .
 ruff check .
 ```
 
-### 🌱 Infrastructure (Terraform)
+### 📦 Package Management
 
-- **Terraform**: Use Terraform best practices
-- **Variables**: Define all variables in `variables.tf`
-- **Documentation**: Document all resources and modules
-- **State**: Never commit `.tfstate` files
+- **Poetry**: Use Poetry for dependency management
+- **pyproject.toml**: Define all dependencies and package metadata
+- **Versioning**: Follow semantic versioning (semver)
+- **Dependencies**: Keep dependencies minimal and well-documented
 
 ## 🧪 Testing
 
@@ -182,9 +181,10 @@ make test
 ### 📏 Test Requirements
 
 - **Unit Tests**: All new features must include unit tests
-- **E2E Tests**: Critical user flows should have E2E test coverage
+- **Integration Tests**: Test integration with Kafka brokers where applicable
 - **Coverage**: Maintain minimum 80% code coverage
 - **Test Naming**: Use descriptive test names that explain the behavior
+- **Mocking**: Use pytest-mock for external dependencies
 
 ## 🆘 Getting Help
 
@@ -197,18 +197,18 @@ make test
 ### 📄 Issue Templates
 
 Use our issue chooser:
-- https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new/choose
+- https://github.com/mtnvencenzo/cezzis-pycore/issues/new/choose
 
 ### ❓ Common Questions
 
-**Q: How do I run the application locally?**
-A: Follow the [Development Setup](#-development-setup) section above. Each application has its own setup instructions.
+**Q: How do I set up the development environment?**
+A: Follow the [Development Setup](#-development-setup) section above. Each package has its own directory with setup instructions.
 
 **Q: How do I run tests?**
-A: Use `make test` in the respective application directory (e.g., `data-ingestion/data-extraction-agent/`).
+A: Use `make test` in the respective package directory (e.g., `kafka-packages/`).
 
-**Q: Which application should I contribute to?**
-A: Check the issue description - it should indicate which application is affected. If unsure, ask in the issue comments.
+**Q: Which package should I contribute to?**
+A: Check the issue description - it should indicate which package is affected. If unsure, ask in the issue comments.
 
 **Q: Can I contribute without approval?**
 A: No, all contributors must be approved by maintainers before making changes.

@@ -1,8 +1,8 @@
 version: 2
 updates:
-  # Python dependencies for data-extraction-agent
+  # Python dependencies for cezzis-kafka
   - package-ecosystem: "pip"
-    directory: "/data-ingestion/data-extraction-agent"
+    directory: "/kafka-packages"
     schedule:
       interval: "weekly"
       day: "monday"

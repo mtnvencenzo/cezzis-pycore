@@ -1,4 +1,4 @@
-# 🔒 Security Policy (RAG Agent)
+# 🔒 Security Policy
 
 ## 🛡️ Supported Versions
 
@@ -11,7 +11,7 @@ We release patches for security vulnerabilities. Which versions are eligible for
 
 ## 🚨 Reporting a Vulnerability
 
-The Cezzis Cocktails RAG Agent team takes security bugs seriously. We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
+The Cezzis PyCore team takes security bugs seriously. We appreciate your efforts to responsibly disclose your findings, and will make every effort to acknowledge your contributions.
 
 ### Where to Report
 
@@ -82,4 +82,4 @@ Our security measures include:
 
 ---
 
-**Thank you for helping keep Cezzis Cocktails RAG Agent and our users safe! 🍸**
+**Thank you for helping keep Cezzis PyCore and our users safe! 🐍**

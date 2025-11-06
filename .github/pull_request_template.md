@@ -3,7 +3,7 @@
 <!--Please include a summary of the changes and the related issue. Please also include relevant motivation and context. List any dependencies that are required for this change.-->
 
 - Issue # (issue)
-- Application(s) affected: <!-- e.g., data-extraction-agent, vector-storage, etc. -->
+- Package(s) affected: <!-- e.g., cezzis-kafka, etc. -->
 
 ## 🔧 Type of change
 
@@ -25,9 +25,8 @@ What type of change was this related to?
 
 - [ ] Unit tests added
 - [ ] Integration tests added
-- [ ] E2e tests added
 - [ ] Manually tested
-- [ ] Tested with local Kafka/infrastructure
+- [ ] Tested with local Kafka broker (if applicable)
 
 <br/>
 
@@ -41,19 +40,20 @@ What type of change was this related to?
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published in downstream modules
-- [ ] I have updated requirements.txt or other dependency files if needed
+- [ ] I have updated pyproject.toml if dependencies changed
+- [ ] Code passes ruff linting and formatting (make standards)
 
 <br/>
 
 ## 🚀 Deployment Notes
 
-<!--Any special deployment considerations-->
+<!--Any special deployment/publishing considerations-->
 
-- [ ] Has Messaging infrastructure (Kafka, etc.)
-- [ ] Has configuration changes (env, appsettings, etc)
-- [ ] Can be deployed independently
-- [ ] Requires coordinated deployment
-- [ ] Requires infrastructure changes (Terraform, etc.)
+- [ ] Requires Kafka broker for testing
+- [ ] Has configuration changes (environment variables, settings, etc.)
+- [ ] Package version updated in pyproject.toml
+- [ ] Ready for PyPI publication
+- [ ] Breaking changes documented
 
 <br/>
 
