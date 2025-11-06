@@ -8,6 +8,9 @@ py-source:
 	export PATH=".venv/bin::PATH" && \
 	exec "$$SHELL"
 
+build:
+	poetry build
+
 run:
 	cd src && ENV="local" python3 app.py
 

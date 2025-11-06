@@ -5,8 +5,8 @@
 			"path": ".github"
 		},
 		{
-			"name": "cezzis-kafka",
-			"path": "cezzis-kafka"
+			"name": "kafka-packages",
+			"path": "kafka-packages"
 		}
 	],
 	"settings": {}
