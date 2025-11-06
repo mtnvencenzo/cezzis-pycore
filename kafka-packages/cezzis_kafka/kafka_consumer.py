@@ -6,8 +6,8 @@ from typing import Type, TypeVar
 from confluent_kafka import Consumer, KafkaError
 
 # Application specific imports
-from ikafka_message_processor import IKafkaMessageProcessor
-from kafka_consumer_settings import KafkaConsumerSettings
+from cezzis_kafka.ikafka_message_processor import IKafkaMessageProcessor
+from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
 logger = logging.getLogger(__name__)
 

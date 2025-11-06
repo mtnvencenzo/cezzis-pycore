@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 
 from confluent_kafka import Consumer, Message
-from kafka_consumer_settings import KafkaConsumerSettings
+
+from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
 
 class IKafkaMessageProcessor(ABC):

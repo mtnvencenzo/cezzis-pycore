@@ -1,18 +1,13 @@
-.PHONY: install run test py-source
+.PHONY: install build test shell
 
 install:
 	poetry install
 
-py-source:
-	. .venv/bin/activate && \
-	export PATH=".venv/bin::PATH" && \
-	exec "$$SHELL"
+shell:
+	poetry shell
 
 build:
 	poetry build
-
-run:
-	cd src && ENV="local" python3 app.py
 
 ruff-check:
 	poetry run ruff check --fix . --config .ruff.toml
@@ -21,7 +16,7 @@ ruff-format:
 	poetry run ruff format . --config .ruff.toml
 
 test:
-	pytest test/
+	poetry run pytest test/
 
 standards:
 	@make ruff-check
