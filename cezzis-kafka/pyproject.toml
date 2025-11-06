@@ -1,10 +1,11 @@
 [project]
-name = "cezzis-kafka"
+name = "cezzis_kafka"
 version = "0.0.1"
 description = "cezzis-kafka is a lightweight Python library for working with Kafka topics and event streams. It simplifies producing, consuming, and managing messages, enabling seamless integration with distributed systems and real-time data pipelines. Designed for flexibility and ease of use, cezzis-kafka supports both synchronous and asynchronous workflows."
 authors = [
     {name = "mtnvencenzo",email = "rvecchi@gmail.com"}
 ]
+packages = [{include = "cezzis_kafka", from = "."}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
