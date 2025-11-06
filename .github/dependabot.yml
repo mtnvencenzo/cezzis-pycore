@@ -1,0 +1,42 @@
+version: 2
+updates:
+  # Python dependencies for data-extraction-agent
+  - package-ecosystem: "pip"
+    directory: "/data-ingestion/data-extraction-agent"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    assignees:
+      - "mtnvencenzo"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # Terraform modules/providers
+  - package-ecosystem: "terraform"
+    directory: "/terraform"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    assignees:
+      - "mtnvencenzo"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    assignees:
+      - "mtnvencenzo"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
