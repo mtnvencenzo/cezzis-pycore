@@ -55,8 +55,6 @@ jobs:
       artifact_name: 'cezzis-kafka-build'
       setup_files: '["README.md"]'
       version: ${{ needs.gitVersion.outputs.semVer }}
-    secrets:
-      github_packages_pat_token: ${{ secrets.GH_PACKAGES_PAT_TOKEN_READ }}
 
   publish:
     name: Publish to GitHub Packages
