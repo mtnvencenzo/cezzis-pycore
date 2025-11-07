@@ -1,4 +1,4 @@
-.PHONY: install build test shell
+.PHONY: install build test shell ruff-check ruff-format coverage standards
 
 install:
 	poetry install

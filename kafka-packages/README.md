@@ -13,7 +13,6 @@ A lightweight, production-ready Python library for working with Apache Kafka. Si
 - ⚡ **Multi-Process Support** - Built-in support for parallel consumer processes
 - 🛡️ **Robust Error Handling** - Comprehensive error handling with automatic retries
 - 📊 **Structured Logging** - Rich, contextual logging for observability
-- 🎯 **Type-Safe Configuration** - Strongly-typed settings with Pydantic
 - 🔌 **Confluent Kafka Integration** - Built on the reliable `confluent-kafka` client
 
 ## 📦 Installation
@@ -310,7 +309,6 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 
 Built with:
 - [Confluent Kafka Python](https://github.com/confluentinc/confluent-kafka-python) - The underlying Kafka client
-- [Pydantic](https://github.com/pydantic/pydantic) - Data validation and settings management
 - [Poetry](https://python-poetry.org/) - Dependency management and packaging
 
 ---

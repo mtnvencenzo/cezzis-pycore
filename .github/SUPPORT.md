@@ -56,7 +56,7 @@ Found a bug? Help us fix it!
 
 ### 📮 How to Report
 
-1. Use our **[Bug Report Template](https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent/issues/new?template=bug_report.md)**
+1. Use our **[Bug Report Template](https://github.com/mtnvencenzo/cezzis-pycore/issues/new?template=bug_report.md)**
 2. Provide detailed information:
    - Steps to reproduce
    - Expected behavior
@@ -80,7 +80,7 @@ Have an idea for improving Cezzis PyCore packages?
 1. **Check existing issues** for similar requests
 2. **Consider the scope** - does it fit the project's goals?
 3. **Think about implementation** - how would it work?
-4. **Identify the application** - which part of the RAG solution would it affect?
+4. **Identify the package** - which package(s) would it affect?
 
 ### 📨 How to Request
 

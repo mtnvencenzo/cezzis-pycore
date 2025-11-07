@@ -14,20 +14,6 @@ updates:
       prefix: "chore"
       include: "scope"
 
-  # Terraform modules/providers
-  - package-ecosystem: "terraform"
-    directory: "/terraform"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 5
-    assignees:
-      - "mtnvencenzo"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
-
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
