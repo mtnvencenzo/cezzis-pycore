@@ -64,11 +64,11 @@ jobs:
       python_version: '3.12'
       working_directory: './kafka-packages'
       artifact_name: 'cezzis-kafka-dist'
-      repository_url: 'https://github.com/mtnvencenzo/cezzis-pycore/_packaging/cezzis_kafka/upload' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
-      twine_username: 'mtnvencenzo'
+      repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
+      twine_username: '__token__'
       allow_publish: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
     secrets:
-      github_packages_pat_token: ${{ secrets.GH_PACKAGES_PAT_TOKEN_READWRITE }}
+      repo_packages_pat_token: ${{ secrets.PYPI_PACKAGES_PAT_TOKEN_READWRITE }}
 
   create_release_prd:
     name: Create release
