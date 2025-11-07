@@ -66,6 +66,7 @@ jobs:
       artifact_name: 'python-package-dist'
       repository_url: 'https://github.com/mtnvencenzo/cezzis-pycore/_packaging/cezzis_kafka/upload' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
       twine_username: 'mtnvencenzo'
+      allow_publish: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
     secrets:
       github_packages_pat_token: ${{ secrets.GH_PACKAGES_PAT_TOKEN_READWRITE }}
 
