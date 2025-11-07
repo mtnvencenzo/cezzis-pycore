@@ -1,0 +1,29 @@
+---
+name: Task template
+about: Describe this issue template's purpose here.
+title: ''
+labels: task
+assignees: ''
+
+---
+
+### 📝 Description
+---
+<!-- What needs to be done? Provide a concise summary of the task. -->
+
+
+### 🔧 Technical Details
+---
+<!-- List any technical context, affected files, APIs, or dependencies. -->
+
+
+### ✅ Acceptance Criteria
+---
+<!-- Bullet the measurable outcomes that define success. -->
+- [ ] Changes are tested locally
+- [ ] Documentation is updated
+- [ ] No breaking changes to existing services
+
+
+### 💡 Implementation Notes
+<!-- Optional: call out ideas, blockers, or follow-up items. -->

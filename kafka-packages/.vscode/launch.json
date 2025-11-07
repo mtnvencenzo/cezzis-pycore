@@ -1,0 +1,17 @@
+    {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Run: Data Extraction Agent",
+                "type": "debugpy",
+                "request": "launch",
+                "program": "app.py",
+                "console": "integratedTerminal",
+                "python": "${workspaceFolder}/.venv/bin/python",
+                "cwd": "${workspaceFolder}/src",
+                "env": {
+                    "ENV": "local"
+                }
+            }
+        ]
+    }

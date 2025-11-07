@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
+			"name": "kafka-packages",
+			"path": "kafka-packages"
+		}
+	],
+	"settings": {}
+}
