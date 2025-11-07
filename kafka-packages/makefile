@@ -18,6 +18,9 @@ ruff-format:
 test:
 	poetry run pytest test/
 
+coverage:
+	poetry run pytest -v --cov=cezzis_kafka --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
+
 standards:
 	@make ruff-check
 	@echo "Code standards check complete."
