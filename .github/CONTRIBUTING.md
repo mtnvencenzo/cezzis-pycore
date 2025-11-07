@@ -1,6 +1,6 @@
 # 🐍 Contributing to Cezzis PyCore
 
-Thank you for your interest in contributing to Cezzis PyCore! This repository contains Python packages for distributed systems and data streaming, with a focus on Kafka integration and message processing. We welcome contributions that help improve package functionality, performance, testing, and documentation.
+Thank you for your interest in contributing to Cezzis PyCore! This repository contains Python packages for distributed systems. We welcome contributions that help improve package functionality, performance, testing, and documentation.
 
 ## 📋 Table of Contents
 
@@ -26,24 +26,11 @@ Before you begin, ensure you have the following installed:
 
 ```text
 cezzis-pycore/
-├── kafka-packages/              # Kafka-related Python packages
-│   ├── cezzis_kafka/           # Main package code
-│   │   ├── __init__.py
-│   │   ├── kafka_consumer.py
-│   │   ├── kafka_consumer_settings.py
-│   │   └── ikafka_message_processor.py
-│   ├── test/                   # Unit and integration tests
-│   ├── pyproject.toml          # Poetry configuration
-│   └── makefile                # Development commands
+├── kafka-packages/             # Kafka-related Python packages
+├── otel-packages/              # OpenTelemetry-related Python packages
 ├── .github/                    # GitHub workflows and templates
 └── README.md                   # Repository documentation
 ```
-
-### 🎯 Packages Overview
-
-This repository contains Python packages for distributed systems:
-- **cezzis-kafka**: Lightweight library for Kafka message production, consumption, and stream processing
-- _(Additional packages may be added as the project evolves)_
 
 ## 💻 Development Setup
 
@@ -51,42 +38,6 @@ This repository contains Python packages for distributed systems:
    ```bash
    git clone https://github.com/mtnvencenzo/cezzis-pycore.git
    cd cezzis-pycore
-   ```
-
-2. **Set Up Kafka Package**
-   ```bash
-   cd kafka-packages
-   
-   # Install dependencies using Poetry
-   make install
-   
-   # Activate virtual environment
-   poetry shell
-   ```
-
-3. **Run Tests**
-   ```bash
-   # Run unit tests
-   make test
-   
-   # Run with coverage
-   pytest --cov=cezzis_kafka --cov-report=term
-   ```
-
-4. **Code Quality Checks**
-   ```bash
-   # Run ruff linting and formatting
-   make standards
-   
-   # Or run individually
-   make ruff-check
-   make ruff-format
-   ```
-
-5. **Build the Package**
-   ```bash
-   # Build distribution packages
-   poetry build
    ```
 
 ## 🔄 Contributing Process
@@ -181,7 +132,6 @@ make test
 ### 📏 Test Requirements
 
 - **Unit Tests**: All new features must include unit tests
-- **Integration Tests**: Test integration with Kafka brokers where applicable
 - **Coverage**: Maintain minimum 80% code coverage
 - **Test Naming**: Use descriptive test names that explain the behavior
 - **Mocking**: Use pytest-mock for external dependencies

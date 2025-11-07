@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
+			"name": "otel-packages",
+			"path": "otel-packages"
+		}
+	],
+	"settings": {}
+}
