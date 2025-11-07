@@ -7,7 +7,7 @@ shell:
 	poetry shell
 
 build:
-	poetry build
+	poetry run stubgen -p cezzis_kafka -o . && poetry build
 
 ruff-check:
 	poetry run ruff check --fix . --config .ruff.toml

@@ -55,6 +55,9 @@ jobs:
       artifact_name: 'cezzis-kafka-dist'
       setup_files: ''
       version: ${{ needs.gitVersion.outputs.semVer }}
+      generate_stubs: true
+      stubs_output_dir: '.'
+      stubs_project_name: 'cezzis_kafka'
 
   publish:
     name: Publish to github packages

@@ -7,7 +7,7 @@
     },
     "explorer.fileNesting.enabled": true,
     "explorer.fileNesting.patterns": {
-      "*.py": "$(capture).py.http, $(capture)_test.py",
+      "*.py": "$(capture).py.http, $(capture)_test.py, $(capture).pyi",
       "requirements.txt": "requirements-*.txt"
     },
     "files.watcherExclude": {
