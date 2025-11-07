@@ -25,17 +25,17 @@ jobs:
     outputs:
       semVer: ${{ steps.gitVersion.outputs.MajorMinorPatch }}
     steps:
-      - name: Checkout Repository
+      - name: Checkout repository
         uses: actions/checkout@v5
         with: 
           fetch-depth: 0
       
-      - name: Install GetVersion
+      - name: Install gitversion
         uses: gittools/actions/gitversion/setup@v4.1.0
         with:
           versionSpec: "6.x"
 
-      - name: Use GitVersion
+      - name: Use gitversion
         id: gitVersion
         uses: gittools/actions/gitversion/execute@v4.1.0
         with:
@@ -57,8 +57,7 @@ jobs:
       version: ${{ needs.gitVersion.outputs.semVer }}
 
   publish:
-    name: Publish to GitHub Packages
-    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+    name: Publish to github packages
     needs: [build, gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/py-package-publish.yaml@main
     with:
