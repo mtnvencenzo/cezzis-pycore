@@ -1,20 +1,18 @@
-
-import pytest
 from multiprocessing.synchronize import Event as EventClass
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
 from confluent_kafka import Consumer, KafkaError, Message
-
-from cezzis_kafka.kafka_consumer import (
-    start_consumer,
-    spawn_consumers,
-)
-from cezzis_kafka.ikafka_message_processor import IKafkaMessageProcessor
-from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
 # Import private functions for testing
 import cezzis_kafka.kafka_consumer as kafka_consumer_module
+from cezzis_kafka.ikafka_message_processor import IKafkaMessageProcessor
+from cezzis_kafka.kafka_consumer import (
+    spawn_consumers,
+    start_consumer,
+)
+from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
 
 class MockProcessor(IKafkaMessageProcessor):
@@ -92,6 +90,7 @@ def mock_consumer() -> MagicMock:
 def stop_event() -> EventClass:
     """Fixture providing a stop event."""
     from multiprocessing import Event
+
     return Event()
 
 
@@ -99,9 +98,7 @@ class TestCreateConsumer:
     """Tests for _create_consumer function."""
 
     @patch("cezzis_kafka.kafka_consumer.Consumer")
-    def test_creates_consumer_successfully(
-        self, mock_consumer_class: MagicMock, mock_processor: MockProcessor
-    ) -> None:
+    def test_creates_consumer_successfully(self, mock_consumer_class: MagicMock, mock_processor: MockProcessor) -> None:
         """Test that consumer is created with correct configuration."""
         mock_consumer_instance = MagicMock()
         mock_consumer_class.return_value = mock_consumer_instance
@@ -123,9 +120,7 @@ class TestCreateConsumer:
         assert result == mock_consumer_instance
 
     @patch("cezzis_kafka.kafka_consumer.Consumer")
-    def test_returns_none_on_exception(
-        self, mock_consumer_class: MagicMock, mock_processor: MockProcessor
-    ) -> None:
+    def test_returns_none_on_exception(self, mock_consumer_class: MagicMock, mock_processor: MockProcessor) -> None:
         """Test that None is returned when consumer creation fails."""
         mock_consumer_class.side_effect = Exception("Connection failed")
 
@@ -138,9 +133,7 @@ class TestCreateConsumer:
 class TestSubscribeConsumer:
     """Tests for _subscribe_consumer function."""
 
-    def test_subscribes_to_topic_successfully(
-        self, mock_consumer: MagicMock, mock_processor: MockProcessor
-    ) -> None:
+    def test_subscribes_to_topic_successfully(self, mock_consumer: MagicMock, mock_processor: MockProcessor) -> None:
         """Test that consumer subscribes to the correct topic."""
         kafka_consumer_module._subscribe_consumer(mock_consumer, mock_processor)
 
@@ -256,9 +249,7 @@ class TestStartPolling:
 class TestCloseConsumer:
     """Tests for _close_consumer function."""
 
-    def test_closes_consumer_successfully(
-        self, mock_consumer: MagicMock, mock_processor: MockProcessor
-    ) -> None:
+    def test_closes_consumer_successfully(self, mock_consumer: MagicMock, mock_processor: MockProcessor) -> None:
         """Test that consumer is closed properly."""
         kafka_consumer_module._close_consumer(mock_consumer, mock_processor)
 
@@ -369,9 +360,7 @@ class TestSpawnConsumers:
     """Tests for spawn_consumers function."""
 
     @patch("cezzis_kafka.kafka_consumer.Process")
-    def test_spawns_correct_number_of_consumers(
-        self, mock_process_class: MagicMock, stop_event: EventClass
-    ) -> None:
+    def test_spawns_correct_number_of_consumers(self, mock_process_class: MagicMock, stop_event: EventClass) -> None:
         """Test that correct number of consumer processes are spawned."""
         mock_process_instances: list[MagicMock] = []
         for i in range(3):
@@ -401,9 +390,7 @@ class TestSpawnConsumers:
             mock_proc.join.assert_called_once()
 
     @patch("cezzis_kafka.kafka_consumer.Process")
-    def test_creates_processors_with_unique_ids(
-        self, mock_process_class: MagicMock, stop_event: EventClass
-    ) -> None:
+    def test_creates_processors_with_unique_ids(self, mock_process_class: MagicMock, stop_event: EventClass) -> None:
         """Test that each spawned consumer gets a unique consumer_id."""
         captured_settings: list[KafkaConsumerSettings] = []
 
@@ -441,5 +428,3 @@ class TestSpawnConsumers:
             assert settings.consumer_group == "test-group"
             assert settings.topic_name == "test-topic"
             assert settings.num_consumers == 3
-
-

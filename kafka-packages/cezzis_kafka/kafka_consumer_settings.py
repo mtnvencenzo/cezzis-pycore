@@ -32,13 +32,13 @@ class KafkaConsumerSettings:
 
         if consumer_id < 0:
             raise ValueError("Invalid consumer ID")
-        
+
         if not bootstrap_servers or bootstrap_servers.strip() == "":
             raise ValueError("Bootstrap servers cannot be empty")
 
         if not consumer_group or consumer_group.strip() == "":
             raise ValueError("Consumer group cannot be empty")
-        
+
         if not topic_name or topic_name.strip() == "":
             raise ValueError("Topic name cannot be empty")
 

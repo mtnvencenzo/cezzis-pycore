@@ -1,6 +1,7 @@
 """Unit tests for kafka_consumer_settings module."""
 
 import pytest
+
 from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
 
@@ -27,10 +28,7 @@ class TestKafkaConsumerSettings:
 
     def test_uses_defaults_correctly(self) -> None:
         settings = KafkaConsumerSettings(
-            consumer_id=1,
-            bootstrap_servers="localhost:9092",
-            consumer_group="test-group",
-            topic_name="test-topic"
+            consumer_id=1, bootstrap_servers="localhost:9092", consumer_group="test-group", topic_name="test-topic"
         )
         assert settings.consumer_id == 1
         assert settings.bootstrap_servers == "localhost:9092"
@@ -78,7 +76,7 @@ class TestKafkaConsumerSettings:
                 num_consumers=3,
             )
 
-    def test_raises_error_on_invalid_num_consumers(self) -> None:   
+    def test_raises_error_on_invalid_num_consumers(self) -> None:
         with pytest.raises(ValueError, match="Number of consumers must be at least 1"):
             KafkaConsumerSettings(
                 consumer_id=1,
