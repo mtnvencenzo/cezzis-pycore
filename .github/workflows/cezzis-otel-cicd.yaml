@@ -1,0 +1,87 @@
+name: cicd-otel-packages
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [
+      otel-packages/**,
+      .github/workflows/cezzis-otel-cicd.yaml
+    ]
+  push:
+    branches: [main]
+    paths: [
+      otel-packages/**,
+      .github/workflows/cezzis-otel-cicd.yaml
+    ]
+
+  workflow_dispatch:
+
+jobs:
+  gitVersion:
+    name: Git version
+    permissions: 
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitVersion.outputs.MajorMinorPatch }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with: 
+          fetch-depth: 0
+      
+      - name: Install gitversion
+        uses: gittools/actions/gitversion/setup@v4.1.0
+        with:
+          versionSpec: "6.x"
+
+      - name: Use gitversion
+        id: gitVersion
+        uses: gittools/actions/gitversion/execute@v4.1.0
+        with:
+          configFilePath: ./GitVersion.yml
+
+  build:
+    name: Build and test
+    needs: [gitVersion]
+    uses: mtnvencenzo/workflows/.github/workflows/py-build.yaml@main
+    with:
+      python_version: '3.12'
+      working_directory: './otel-packages'
+      ruff_config: '.ruff.toml'
+      pytest_args: '-v'
+      coverage_source: 'cezzis_otel'
+      upload_artifact: true
+      artifact_name: 'cezzis-otel-dist'
+      setup_files: ''
+      version: ${{ needs.gitVersion.outputs.semVer }}
+      generate_stubs: true
+      stubs_output_dir: '.'
+      stubs_project_name: 'cezzis_otel'
+
+  publish:
+    name: Publish to github packages
+    needs: [build, gitVersion]
+    uses: mtnvencenzo/workflows/.github/workflows/py-package-publish.yaml@main
+    with:
+      python_version: '3.12'
+      working_directory: './otel-packages'
+      artifact_name: 'cezzis-otel-dist'
+      repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
+      twine_username: '__token__'
+      allow_publish: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+    secrets:
+      repo_packages_pat_token: ${{ secrets.PYPI_PACKAGES_PAT_TOKEN_READWRITE }}
+
+  create_release_prd:
+    name: Create release
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [publish, gitVersion]
+    steps:
+      - name: Create release
+        uses: mtnvencenzo/workflows/.github/actions/create-release@main
+        with:
+          version: ${{ needs.gitVersion.outputs.semVer }}

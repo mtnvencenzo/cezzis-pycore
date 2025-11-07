@@ -119,7 +119,6 @@ Want to contribute code, documentation, or other improvements?
 - 📦 **New packages**
 - 🔧 **Build and tooling**
 - ⚡ **Performance improvements**
-- � **Kafka integrations**
 
 ### ✅ Approval Process
 
@@ -156,7 +155,6 @@ Need professional support or custom development?
 - 🎓 **Training and Workshops**
 - 🚀 **Deployment Support**
 - 🔧 **Maintenance Contracts**
-- 📊 **Kafka Integration Consulting**
 - ⚡ **Performance Optimization**
 
 ## 📊 Project Status

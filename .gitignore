@@ -73,3 +73,6 @@ node_modules/
 
 # Python virtual host environments
 /**/.venv/
+/**/pytest-results.xml
+/**/coverage.xml
+/**/dist/*

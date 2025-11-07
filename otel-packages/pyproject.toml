@@ -1,0 +1,49 @@
+[project]
+name = "cezzis_otel"
+version = "0.0.1"
+description = "cezzis-otel is a lightweight Python library for working with opentelemetry.  It simplifies otel collector and otlpexporter integration."
+authors = [
+    {name = "mtnvencenzo",email = "rvecchi@gmail.com"}
+]
+packages = [{include = "cezzis_otel", from = "."}]
+license = {text = "MIT"}
+readme = "README-pypi.md"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "opentelemetry-api (>=1.38.0,<2.0.0)",
+    "opentelemetry-sdk (>=1.38.0,<2.0.0)",
+    "opentelemetry-exporter-otlp (>=1.38.0,<2.0.0)",
+    "opentelemetry-instrumentation-requests (>=0.59b0,<0.60)",
+    "opentelemetry-instrumentation-logging (>=0.59b0,<0.60)",
+    "opentelemetry-semantic-conventions (>=0.59b0,<0.60)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "pytest-cov (>=4.0.0,<6.0.0)",
+    "ruff (>=0.14.3,<0.15.0)",
+    "pytest-mock (>=3.15.1,<4.0.0)",
+    "mypy (>=1.18.2,<2.0.0)"
+]
+
+[tool.pyright]
+# Allow accessing private members in test files
+reportPrivateUsage = "none"
+# More specific: only disable for test directory
+exclude = []
+ignore = []
+
+# Alternative: Configure per-directory rules
+[[tool.pyright.executionEnvironments]]
+root = "test"
+reportPrivateUsage = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
+reportPrivateUsage = "warning"

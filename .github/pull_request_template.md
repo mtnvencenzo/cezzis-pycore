@@ -26,7 +26,6 @@ What type of change was this related to?
 - [ ] Unit tests added
 - [ ] Integration tests added
 - [ ] Manually tested
-- [ ] Tested with local Kafka broker (if applicable)
 
 <br/>
 
@@ -49,7 +48,6 @@ What type of change was this related to?
 
 <!--Any special deployment/publishing considerations-->
 
-- [ ] Requires Kafka broker for testing
 - [ ] Has configuration changes (environment variables, settings, etc.)
 - [ ] Package version updated in pyproject.toml
 - [ ] Ready for PyPI publication
