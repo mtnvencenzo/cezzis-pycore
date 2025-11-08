@@ -103,22 +103,17 @@ import json
 # Configure producer with retry and DLQ
 settings = KafkaPublisherSettings(
     bootstrap_servers="localhost:9092",
-    topic_name="orders",
-    enable_retry=True,
-    max_retry_attempts=3,
-    dlq_topic_name="orders-dlq"
+    max_retries=3,
+    dlq_topic="orders-dlq"
 )
 
 publisher = KafkaPublisher(settings)
 
 # Send message with automatic retry/DLQ handling
 message = json.dumps({"order_id": "12345", "amount": 99.99})
-future = publisher.send(key="order-12345", value=message)
+message_id = publisher.send(topic="orders", key="order-12345", message=message)
 
-# Wait for delivery confirmation
-result = future.get(timeout=30)
-print(f"Delivered to partition {result.partition}, offset {result.offset}")
-
+print(f"Sent message with ID: {message_id}")
 publisher.close()  # Graceful shutdown
 ```
 

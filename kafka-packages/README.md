@@ -261,16 +261,15 @@ settings = KafkaPublisherSettings(
 publisher = KafkaPublisher(settings)
 
 # Send a simple message
-publisher.send(
+message_id = publisher.send(
     topic="my-topic",
     message="Hello, Kafka!",
-    message_id="msg-001"  # Optional: auto-generated if not provided
 )
 
 # Send with headers and key
-publisher.send(
+message_id = publisher.send(
     topic="user-events",
-    message={"user_id": 123, "action": "login"},
+    message='{"user_id": 123, "action": "login"}',
     key="user-123",
     headers={"content-type": "application/json", "version": "v1"}
 )
@@ -297,64 +296,28 @@ import json
 # Enterprise producer configuration
 settings = KafkaPublisherSettings(
     bootstrap_servers="localhost:9092",
-    topic_name="orders",
-    client_id="order-service",
-    
-    # Kafka producer optimizations
-    acks="all",                    # Wait for all replicas
-    retries=3,                     # Kafka-level retries
-    batch_size=16384,              # Batch messages for efficiency
-    linger_ms=10,                  # Wait up to 10ms to batch
-    compression_type="snappy",     # Compress messages
-    max_in_flight_requests_per_connection=5,
-    
-    # DLQ configuration
-    dlq_topic_name="orders-dlq",
-    
-    # Retry settings
-    enable_retry=True,
-    max_retry_attempts=3,
-    base_delay_seconds=1.0,        # Start with 1 second delay
-    max_delay_seconds=30.0,        # Cap at 30 seconds
-    backoff_multiplier=2.0         # Exponential backoff
+    max_retries=3,
+    dlq_topic="orders-dlq",
+    producer_config={
+        # Kafka producer optimizations
+        "acks": "all",                    # Wait for all replicas
+        "retries": 3,                     # Kafka-level retries
+        "batch.size": 16384,              # Batch messages for efficiency
+        "linger.ms": 10,                  # Wait up to 10ms to batch
+        "compression.type": "snappy",     # Compress messages
+        "max.in.flight.requests.per.connection": 5,
+    }
 )
 
-# Custom delivery handler for monitoring
-class OrderDeliveryHandler(DeliveryHandler):
-    def __init__(self, settings: KafkaPublisherSettings):
-        super().__init__(settings)
-        self._success_count = 0
-        self._failure_count = 0
-    
-    def on_delivery_success(self, context: DeliveryContext) -> None:
-        super().on_delivery_success(context)
-        self._success_count += 1
-        print(f"✅ Order {context.key} delivered successfully")
-    
-    def on_delivery_failure(self, context: DeliveryContext, error: Exception) -> None:
-        self._failure_count += 1
-        print(f"❌ Order {context.key} delivery failed: {error}")
-        super().on_delivery_failure(context, error)
-    
-    def on_retry_scheduled(self, context: DeliveryContext, delay: float, attempt: int) -> None:
-        print(f"🔄 Retry {attempt} scheduled for order {context.key} in {delay:.1f}s")
-    
-    def on_dlq_sent(self, context: DeliveryContext, error: Exception) -> None:
-        print(f"💀 Order {context.key} sent to DLQ after max retries: {error}")
-
-# Initialize publisher with custom handler
-publisher = KafkaPublisher(settings, delivery_handler=OrderDeliveryHandler(settings))
+# Initialize publisher 
+publisher = KafkaPublisher(settings)
 
 # Publish messages with automatic retry/DLQ
 order_data = {"id": "12345", "product": "Premium Widget", "quantity": 5}
 message = json.dumps(order_data)
 
-try:
-    future = publisher.send(key=f"order-{order_data['id']}", value=message)
-    result = future.get(timeout=30)
-    print(f"Message delivered to partition {result.partition}, offset {result.offset}")
-except Exception as e:
-    print(f"Final delivery failure: {e}")
+message_id = publisher.send(topic="orders", key=f"order-{order_data['id']}", message=message)
+print(f"Sent message with ID: {message_id}")
 
 # Graceful shutdown (important for retry cleanup)
 publisher.close()
@@ -365,35 +328,26 @@ publisher.close()
 For high-throughput scenarios:
 
 ```python
-import asyncio
 from concurrent.futures import as_completed
+import json
 
-async def publish_order_batch(publisher: KafkaPublisher, orders: list):
+def publish_order_batch(publisher: KafkaPublisher, orders: list):
     """Publish a batch of orders with concurrent processing."""
-    futures = []
+    message_ids = []
     
     for order in orders:
         message = json.dumps(order)
-        future = publisher.send(
+        message_id = publisher.send(
+            topic="orders",
             key=f"order-{order['id']}", 
-            value=message
+            message=message
         )
-        futures.append((future, order['id']))
+        message_ids.append((message_id, order['id']))
     
-    # Wait for all deliveries with timeout
-    successful = 0
-    failed = 0
+    # Flush to ensure delivery
+    publisher.flush()
     
-    for future, order_id in futures:
-        try:
-            result = future.get(timeout=30)
-            successful += 1
-            print(f"Order {order_id}: partition={result.partition}, offset={result.offset}")
-        except Exception as e:
-            failed += 1
-            print(f"Order {order_id} failed: {e}")
-    
-    return {"successful": successful, "failed": failed}
+    return {"message_ids": message_ids, "total": len(message_ids)}
 
 # Example usage
 orders = [
@@ -403,8 +357,8 @@ orders = [
     # ... more orders
 ]
 
-stats = asyncio.run(publish_order_batch(publisher, orders))
-print(f"Batch complete: {stats['successful']} successful, {stats['failed']} failed")
+stats = publish_order_batch(publisher, orders)
+print(f"Batch complete: {stats['total']} messages sent")
 ```
 
 </details>
@@ -480,28 +434,25 @@ start_consumer(stop_event, processor)
 
 ### `KafkaPublisherSettings`
 
-Configuration class for Kafka publishers with comprehensive settings for production use.
+Configuration class for Kafka publishers.
 
-**Core Attributes:**
+**Constructor:**
+```python
+KafkaPublisherSettings(
+    bootstrap_servers: str,
+    max_retries: int = 3,
+    dlq_topic: Optional[str] = None,
+    metrics_callback: Optional[Callable] = None,
+    producer_config: Optional[Dict[str, Any]] = None
+)
+```
+
+**Parameters:**
 - `bootstrap_servers` (str): Comma-separated list of Kafka broker addresses
-- `topic_name` (str): Default topic name for message publishing
-- `client_id` (str, optional): Unique identifier for the producer client
-
-**Kafka Producer Configuration:**
-- `acks` (str, default="1"): Acknowledgment level ("0", "1", "all")
-- `retries` (int, default=3): Number of Kafka-level retries
-- `batch_size` (int, default=16384): Number of bytes to batch before sending
-- `linger_ms` (int, default=0): Time to wait for batching (milliseconds)
-- `compression_type` (str, optional): Compression algorithm ("gzip", "snappy", "lz4", "zstd")
-- `max_in_flight_requests_per_connection` (int, default=5): Maximum unacknowledged requests
-
-**Retry & DLQ Configuration:**
-- `enable_retry` (bool, default=False): Enable application-level retry mechanism
-- `max_retry_attempts` (int, default=3): Maximum number of retry attempts
-- `base_delay_seconds` (float, default=1.0): Initial retry delay
-- `max_delay_seconds` (float, default=60.0): Maximum retry delay cap
-- `backoff_multiplier` (float, default=2.0): Exponential backoff multiplier
-- `dlq_topic_name` (str, optional): Dead letter queue topic name
+- `max_retries` (int, default=3): Maximum number of retries for retriable errors
+- `dlq_topic` (Optional[str]): Dead letter queue topic name for terminal failures
+- `metrics_callback` (Optional[Callable]): Callback function for reporting metrics
+- `producer_config` (Optional[Dict]): Additional Kafka producer configuration to override defaults
 
 ### `KafkaPublisher`
 
@@ -509,14 +460,14 @@ High-performance Kafka producer with enterprise features.
 
 **Constructor:**
 ```python
-KafkaPublisher(settings: KafkaPublisherSettings, delivery_handler: DeliveryHandler = None)
+KafkaPublisher(settings: KafkaPublisherSettings)
 ```
 
 **Methods:**
 
-- `send(topic: str = None, key: str = None, value: str = None, headers: dict = None, message_id: str = None) -> Future`: Send a message and return a Future for the delivery result
-- `flush(timeout: float = None) -> None`: Flush all pending messages with optional timeout
-- `close()`: Gracefully shutdown the producer with proper resource cleanup
+- `send(topic: str, message: str | bytes, key: str = None, headers: dict = None, message_id: str = None, metadata: dict = None) -> str`: Send a message and return the message ID for tracking
+- `flush(timeout: float = 10.0) -> None`: Flush all pending messages with optional timeout
+- `close() -> None`: Gracefully shutdown the producer with proper resource cleanup
 
 ### `DeliveryHandler`
 
@@ -524,7 +475,14 @@ Base class for handling message delivery callbacks with retry and DLQ functional
 
 **Constructor:**
 ```python
-DeliveryHandler(settings: KafkaPublisherSettings)
+DeliveryHandler(
+    max_retries: int = 3,
+    retry_backoff_ms: int = 1000,
+    dlq_topic: Optional[str] = None,
+    metrics_callback: Optional[Callable] = None,
+    bootstrap_servers: Optional[str] = None,
+    retry_producer: Optional[Producer] = None
+)
 ```
 
 **Key Methods (Override for custom behavior):**
@@ -602,21 +560,17 @@ Built-in intelligence for categorizing and handling different error types:
 
 ### Metrics and Monitoring
 
-Extensible metrics system for production monitoring:
+The producer includes built-in metrics support through the optional `metrics_callback` parameter:
 
 ```python
-class MetricsDeliveryHandler(DeliveryHandler):
-    def on_delivery_success(self, context: DeliveryContext) -> None:
-        super().on_delivery_success(context)
-        metrics.increment("kafka.messages.delivered.success")
-        
-    def on_delivery_failure(self, context: DeliveryContext, error: Exception) -> None:
-        super().on_delivery_failure(context, error)
-        metrics.increment("kafka.messages.delivered.failed")
-        
-    def on_dlq_sent(self, context: DeliveryContext, error: Exception) -> None:
-        super().on_dlq_sent(context, error)
-        metrics.increment("kafka.messages.dlq")
+def my_metrics_callback(metric_name: str, metric_data: dict):
+    """Custom metrics reporting."""
+    print(f"Metric: {metric_name}, Data: {metric_data}")
+
+settings = KafkaPublisherSettings(
+    bootstrap_servers="localhost:9092",
+    metrics_callback=my_metrics_callback
+)
 ```
 
 ## 🎯 Best Practices
@@ -626,31 +580,38 @@ class MetricsDeliveryHandler(DeliveryHandler):
 **High Throughput:**
 ```python
 settings = KafkaPublisherSettings(
-    batch_size=32768,           # Larger batches
-    linger_ms=50,               # Allow more batching time
-    compression_type="lz4",     # Fast compression
-    acks="1"                    # Balance reliability/performance
+    bootstrap_servers="localhost:9092",
+    producer_config={
+        "batch.size": 32768,           # Larger batches
+        "linger.ms": 50,               # Allow more batching time
+        "compression.type": "lz4",     # Fast compression
+        "acks": "1"                    # Balance reliability/performance
+    }
 )
 ```
 
 **High Reliability:**
 ```python
 settings = KafkaPublisherSettings(
-    acks="all",                 # Wait for all replicas
-    retries=10,                 # More Kafka-level retries
-    enable_retry=True,          # Application-level retries
-    max_retry_attempts=5,       # Comprehensive retry coverage
-    dlq_topic_name="critical-dlq"  # Capture all failures
+    bootstrap_servers="localhost:9092",
+    max_retries=10,                    # More application-level retries
+    dlq_topic="critical-dlq",          # Capture all failures
+    producer_config={
+        "acks": "all",                 # Wait for all replicas
+        "retries": 10,                 # More Kafka-level retries
+    }
 )
 ```
 
 **Low Latency:**
 ```python
 settings = KafkaPublisherSettings(
-    batch_size=1,               # Minimal batching
-    linger_ms=0,                # Send immediately
-    acks="1",                   # Fast acknowledgment
-    compression_type=None       # No compression overhead
+    bootstrap_servers="localhost:9092",
+    producer_config={
+        "batch.size": 1,               # Minimal batching
+        "linger.ms": 0,                # Send immediately
+        "acks": "1",                   # Fast acknowledgment
+    }
 )
 ```
 
