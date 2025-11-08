@@ -140,6 +140,108 @@ start_consumer(stop_event, processor)
 
 </details>
 
+
+
+
+## 🔽 Consumer Guide
+
+### Creating Message Processors
+
+The `IKafkaMessageProcessor` interface provides lifecycle hooks for comprehensive message handling:
+
+```python
+from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings
+from confluent_kafka import Consumer, Message
+import json
+
+class OrderProcessor(IKafkaMessageProcessor):
+    def __init__(self, settings: KafkaConsumerSettings):
+        self._settings = settings
+        self._processed_count = 0
+    
+    @staticmethod
+    def CreateNew(kafka_settings: KafkaConsumerSettings) -> "OrderProcessor":
+        return OrderProcessor(kafka_settings)
+    
+    def kafka_settings(self) -> KafkaConsumerSettings:
+        return self._settings
+    
+    def message_received(self, msg: Message) -> None:
+        """Process order messages."""
+        try:
+            order_data = json.loads(msg.value().decode('utf-8'))
+            self._process_order(order_data)
+            self._processed_count += 1
+            print(f"Processed order {order_data.get('id')} - Total: {self._processed_count}")
+        except json.JSONDecodeError:
+            print(f"Invalid JSON in message: {msg.value()}")
+        except Exception as e:
+            print(f"Error processing order: {e}")
+    
+    def _process_order(self, order_data: dict) -> None:
+        # Your business logic here
+        pass
+```
+
+### Multi-Process Consumption
+
+For high-throughput scenarios, run multiple consumer processes:
+
+```python
+# multi_consumer.py
+from multiprocessing import Process, Event
+import signal
+import sys
+
+def run_consumer_process(consumer_id: int, shared_stop_event: Event):
+    """Run a consumer in a separate process."""
+    from cezzis_kafka import KafkaConsumerSettings, start_consumer
+    
+    settings = KafkaConsumerSettings(
+        consumer_id=consumer_id,
+        bootstrap_servers="localhost:9092",
+        consumer_group="order-processing-group",
+        topic_name="orders",
+        num_consumers=1
+    )
+    
+    processor = OrderProcessor.CreateNew(settings)
+    start_consumer(shared_stop_event, processor)
+
+if __name__ == "__main__":
+    # Number of consumer processes
+    num_processes = 4
+    shared_stop_event = Event()
+    
+    # Start consumer processes
+    processes = []
+    for i in range(num_processes):
+        p = Process(target=run_consumer_process, args=(i, shared_stop_event))
+        p.start()
+        processes.append(p)
+        print(f"Started consumer process {i}")
+    
+    def signal_handler(sig, frame):
+        print("\nShutting down consumers...")
+        shared_stop_event.set()
+        for p in processes:
+            p.join(timeout=10)
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Wait for processes
+    for p in processes:
+        p.join()
+```
+
+</details>
+
+## 🔼 Producer Guide
+
+The Kafka producer enables high-performance, reliable message publishing with enterprise-grade features including automatic retries, dead letter queues (DLQ), and comprehensive error handling.
+
 ### 📤 Producer Quick Start
 
 <details>
@@ -301,140 +403,6 @@ orders = [
 stats = asyncio.run(publish_order_batch(publisher, orders))
 print(f"Batch complete: {stats['successful']} successful, {stats['failed']} failed")
 ```
-
-## 🔽 Consumer Guide
-
-### Creating Message Processors
-
-The `IKafkaMessageProcessor` interface provides lifecycle hooks for comprehensive message handling:
-
-```python
-from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings
-from confluent_kafka import Consumer, Message
-import json
-
-class OrderProcessor(IKafkaMessageProcessor):
-    def __init__(self, settings: KafkaConsumerSettings):
-        self._settings = settings
-        self._processed_count = 0
-    
-    @staticmethod
-    def CreateNew(kafka_settings: KafkaConsumerSettings) -> "OrderProcessor":
-        return OrderProcessor(kafka_settings)
-    
-    def kafka_settings(self) -> KafkaConsumerSettings:
-        return self._settings
-    
-    def message_received(self, msg: Message) -> None:
-        """Process order messages."""
-        try:
-            order_data = json.loads(msg.value().decode('utf-8'))
-            self._process_order(order_data)
-            self._processed_count += 1
-            print(f"Processed order {order_data.get('id')} - Total: {self._processed_count}")
-        except json.JSONDecodeError:
-            print(f"Invalid JSON in message: {msg.value()}")
-        except Exception as e:
-            print(f"Error processing order: {e}")
-    
-    def _process_order(self, order_data: dict) -> None:
-        # Your business logic here
-        pass
-```
-
-### Multi-Process Consumption
-
-For high-throughput scenarios, run multiple consumer processes:
-
-```python
-# multi_consumer.py
-from multiprocessing import Process, Event
-import signal
-import sys
-
-def run_consumer_process(consumer_id: int, shared_stop_event: Event):
-    """Run a consumer in a separate process."""
-    from cezzis_kafka import KafkaConsumerSettings, start_consumer
-    
-    settings = KafkaConsumerSettings(
-        consumer_id=consumer_id,
-        bootstrap_servers="localhost:9092",
-        consumer_group="order-processing-group",
-        topic_name="orders",
-        num_consumers=1
-    )
-    
-    processor = OrderProcessor.CreateNew(settings)
-    start_consumer(shared_stop_event, processor)
-
-if __name__ == "__main__":
-    # Number of consumer processes
-    num_processes = 4
-    shared_stop_event = Event()
-    
-    # Start consumer processes
-    processes = []
-    for i in range(num_processes):
-        p = Process(target=run_consumer_process, args=(i, shared_stop_event))
-        p.start()
-        processes.append(p)
-        print(f"Started consumer process {i}")
-    
-    def signal_handler(sig, frame):
-        print("\nShutting down consumers...")
-        shared_stop_event.set()
-        for p in processes:
-            p.join(timeout=10)
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-    
-    # Wait for processes
-    for p in processes:
-        p.join()
-```
-
-</details>
-
-## 🔼 Producer Guide
-
-The Kafka producer enables high-performance, reliable message publishing with enterprise-grade features including automatic retries, dead letter queues (DLQ), and comprehensive error handling.
-
-### <details><summary>Quick Start - Producer</summary>
-
-```python
-from cezzis_kafka import KafkaPublisher, KafkaPublisherSettings
-import json
-
-# Basic producer setup
-settings = KafkaPublisherSettings(
-    bootstrap_servers="localhost:9092",
-    topic_name="orders"
-)
-
-publisher = KafkaPublisher(settings)
-
-# Send a message
-order_data = {"id": "12345", "product": "Widget", "quantity": 10}
-message = json.dumps(order_data)
-
-future = publisher.send(key="order-12345", value=message)
-result = future.get(timeout=30)  # Wait for delivery confirmation
-
-print(f"Message delivered: partition={result.partition}, offset={result.offset}")
-```
-
-</details>
-
-### Enterprise Publishing with Retry & DLQ
-
-For production environments, configure automatic retries and dead letter queue handling:
-The `spawn_consumers` function will:
-- Create the specified number of consumer processes
-- Assign each a unique `consumer_id` (0, 1, 2, ...)
-- Start all processes and wait for them to complete
-- Handle process lifecycle and logging automatically
 
 ## 📚 API Reference
 
