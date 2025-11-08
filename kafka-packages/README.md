@@ -730,7 +730,6 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 
 ## 📞 Support
 
-- 📧 Email: rvecchi@gmail.com
 - 🐛 Issues: [GitHub Issues](https://github.com/mtnvencenzo/cezzis-pycore/issues)
 - 💬 Discussions: [GitHub Discussions](https://github.com/mtnvencenzo/cezzis-pycore/discussions)
 
