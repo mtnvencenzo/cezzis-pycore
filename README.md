@@ -14,13 +14,29 @@ A collection of production-ready Python packages for building distributed system
 
 A lightweight library for Apache Kafka message consumption with built-in error handling, multi-process support, and structured logging.
 
-**Installation:**
 ```bash
 pip install cezzis-kafka
 ```
 
-- 📦 [PyPI Project](https://pypi.org/project/cezzis-kafka/)
-- 📖 [Documentation](./kafka-packages/README.md)
+📦 [PyPI Project](https://pypi.org/project/cezzis-kafka/)  
+📖 [Documentation](./kafka-packages/README.md)
+
+---
+
+### [Cezzis OTel](./otel-packages/)
+
+[![PyPI version](https://img.shields.io/pypi/v/cezzis-otel.svg)](https://pypi.org/project/cezzis-otel/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI/CD](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-otel-cicd.yaml/badge.svg)](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-otel-cicd.yaml)
+
+A lightweight library for initializing opentelemetry traces and logs for use with otlp exporters and otel collectors.
+
+```bash
+pip install cezzis-otel
+```
+
+📦 [PyPI Project](https://pypi.org/project/cezzis-otel/)  
+📖 [Documentation](./otel-packages/README.md)
 
 ---
 
@@ -44,6 +60,11 @@ This repository uses a monorepo structure with independent package directories. 
 cezzis-pycore/
 ├── kafka-packages/          # Kafka consumer library
 │   ├── cezzis_kafka/       # Package source code
+│   ├── test/               # Package tests
+│   ├── README.md           # Package documentation
+│   └── pyproject.toml      # Package dependencies
+├── otel-packages/           # Opentelemetry library
+│   ├── cezzis_otel/       # Package source code
 │   ├── test/               # Package tests
 │   ├── README.md           # Package documentation
 │   └── pyproject.toml      # Package dependencies

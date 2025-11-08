@@ -60,7 +60,7 @@ poetry add cezzis-kafka
 pip install cezzis-kafka
 ```
 
-## 🚀 Quick Start
+## 🔽 Kafka Consumer Guide
 
 ### 🔽 Consumer Quick Start
 
@@ -140,12 +140,10 @@ start_consumer(stop_event, processor)
 
 </details>
 
-
-
-
-## 🔽 Consumer Guide
-
 ### Creating Message Processors
+
+<details>
+<summary>Click to expand for details on creating message processors</summary>
 
 The `IKafkaMessageProcessor` interface provides lifecycle hooks for comprehensive message handling:
 
@@ -284,6 +282,9 @@ publisher.close()
 
 ### Enterprise Publishing with Retry & DLQ
 
+<details>
+<summary>Click to expand for details retry enterprise retry and DLQ mechinisms</summary>
+
 For production environments, configure automatic retries and dead letter queue handling:
 
 ```python
@@ -403,6 +404,8 @@ orders = [
 stats = asyncio.run(publish_order_batch(publisher, orders))
 print(f"Batch complete: {stats['successful']} successful, {stats['failed']} failed")
 ```
+
+</details>
 
 ## 📚 API Reference
 
