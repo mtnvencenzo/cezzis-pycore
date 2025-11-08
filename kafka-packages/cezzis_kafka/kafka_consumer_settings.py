@@ -1,5 +1,5 @@
 class KafkaConsumerSettings:
-    """Application settings loaded from environment variables and .env files.
+    """Kafka Consumer Settings.
 
     Attributes:
         consumer_id (int): Kafka consumer ID.
