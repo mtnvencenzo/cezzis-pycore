@@ -1,7 +1,9 @@
 import logging
 import time
+import json
+import threading
 from typing import Any, Callable, Dict, Optional
-from confluent_kafka import KafkaError, Message
+from confluent_kafka import KafkaError, Message, Producer
 from cezzis_kafka.delivery_context import DeliveryContext
 from cezzis_kafka.delivery_status import DeliveryStatus
 
@@ -16,7 +18,9 @@ class DeliveryHandler:
         max_retries: int = 3,
         retry_backoff_ms: int = 1000,
         dlq_topic: Optional[str] = None,
-        metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None
+        metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+        bootstrap_servers: Optional[str] = None,
+        retry_producer: Optional[Producer] = None
     ):
         """Initialize the DeliveryHandler.
         
@@ -25,6 +29,8 @@ class DeliveryHandler:
             retry_backoff_ms (int): Backoff time in milliseconds between retries.
             dlq_topic (Optional[str]): Dead Letter Queue topic name for terminal failures.
             metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
+            bootstrap_servers (Optional[str]): Kafka bootstrap servers for DLQ producer.
+            retry_producer (Optional[Producer]): Producer instance to use for retries.
 
         Returns:
             None
@@ -36,23 +42,68 @@ class DeliveryHandler:
         self.dlq_topic = dlq_topic
         self.metrics_callback = metrics_callback
         self._pending_messages: Dict[str, DeliveryContext] = {}
+        self._retry_producer = retry_producer  # Producer for retry attempts
+        self._retry_timers: Dict[str, threading.Timer] = {}  # Track active retry timers
+        self._shutdown = False  # Flag to prevent new retries during shutdown
+        
+        # Initialize DLQ producer if DLQ topic is configured
+        self._dlq_producer: Optional[Producer] = None
+        if dlq_topic and bootstrap_servers:
+            self._init_dlq_producer(bootstrap_servers)
     
-    def track_message(self, message_id: str, topic: str, metadata: Optional[Dict[str, Any]] = None) -> None:
+    def _init_dlq_producer(self, bootstrap_servers: str) -> None:
+        """Initialize the DLQ producer with optimized settings for reliability."""
+        dlq_config = {
+            'bootstrap.servers': bootstrap_servers,
+            'acks': 'all',  # Ensure DLQ messages are reliably stored
+            'retries': 5,   # Retry DLQ sends (more than main producer)
+            'retry.backoff.ms': 1000,
+            'max.in.flight.requests.per.connection': 1,
+            'enable.idempotence': True,
+            'compression.type': 'snappy',
+            'request.timeout.ms': 30000,  # Longer timeout for DLQ
+            'delivery.timeout.ms': 60000,  # Ensure DLQ delivery
+        }
+        
+        try:
+            self._dlq_producer = Producer(dlq_config)
+            logger.info(
+                "DLQ producer initialized successfully",
+                extra={"dlq_topic": self.dlq_topic, "bootstrap_servers": bootstrap_servers}
+            )
+        except Exception as e:
+            logger.error(
+                "Failed to initialize DLQ producer",
+                exc_info=True,
+                extra={"dlq_topic": self.dlq_topic, "error": str(e)}
+            )
+            # Continue without DLQ producer - we'll log errors instead
+            self._dlq_producer = None
+    
+    def track_message(self, message_id: str, topic: str, metadata: Optional[Dict[str, Any]] = None, 
+                     original_message_data: Optional[Dict[str, Any]] = None) -> None:
         """Register a message for delivery tracking.
         
         Args:
             message_id (str): Unique identifier for the message.
             topic (str): Kafka topic name.
             metadata (Optional[Dict[str, Any]]): Additional metadata for tracking.
+            original_message_data (Optional[Dict[str, Any]]): Original message data for retries.
 
         Returns:
             None
         """
-        self._pending_messages[message_id] = DeliveryContext(
+        context = DeliveryContext(
             message_id=message_id,
             topic=topic,
             metadata=metadata or {}
         )
+        
+        # Store original message data for retry attempts
+        if original_message_data:
+            context.metadata['_original_message'] = original_message_data
+            
+        self._pending_messages[message_id] = context
     
     def handle_delivery(self, err: KafkaError | None, msg: Message) -> None:
         """
@@ -77,10 +128,12 @@ class DeliveryHandler:
             if err is None:
                 self._handle_successful_delivery(context, msg)
             else:
-                self._handle_failed_delivery(context, msg, err)
+                should_cleanup = self._handle_failed_delivery(context, msg, err)
+                if should_cleanup:
+                    self._pending_messages.pop(message_id, None)
         finally:
-            # Clean up tracking for successful deliveries or exhausted retries
-            if err is None or context.attempt_count >= self.max_retries:
+            # Clean up tracking for successful deliveries
+            if err is None:
                 self._pending_messages.pop(message_id, None)
     
     def _extract_message_id(self, msg: Message) -> str:
@@ -139,7 +192,7 @@ class DeliveryHandler:
                 "delivery_time_ms": delivery_time * 1000
             })
     
-    def _handle_failed_delivery(self, context: DeliveryContext, msg: Message, err: KafkaError) -> None:
+    def _handle_failed_delivery(self, context: DeliveryContext, msg: Message, err: KafkaError) -> bool:
         """Handle failed message delivery with retry logic.
         
         Args:
@@ -148,7 +201,7 @@ class DeliveryHandler:
             err (KafkaError): The error that occurred during delivery.
 
         Returns:
-            None
+            bool: True if message should be cleaned up (no more retries), False otherwise
         """
         status = self._classify_error(err)
         
@@ -177,8 +230,10 @@ class DeliveryHandler:
         # Handle based on error classification
         if status == DeliveryStatus.RETRIABLE_ERROR and context.attempt_count < self.max_retries:
             self._schedule_retry(context, msg)
+            return False  # Keep tracking, retry scheduled
         else:
             self._handle_terminal_failure(context, msg, err, status)
+            return True  # Clean up tracking, terminal failure
     
     def _classify_error(self, err: KafkaError) -> DeliveryStatus:
         """
@@ -228,7 +283,7 @@ class DeliveryHandler:
         return DeliveryStatus.RETRIABLE_ERROR
     
     def _schedule_retry(self, context: DeliveryContext, msg: Message) -> None:
-        """Schedule message for retry (in real implementation, use a proper scheduler).
+        """Schedule message for retry with exponential backoff.
         
         Args:
             context (DeliveryContext): Context of the message to retry.
@@ -237,24 +292,147 @@ class DeliveryHandler:
         Returns:
             None
         """
+        if self._shutdown:
+            logger.warning(
+                "Cannot schedule retry - handler is shutting down",
+                extra={"message_id": context.message_id, "topic": msg.topic()}
+            )
+            return
+            
+        if not self._retry_producer:
+            logger.error(
+                "Cannot retry message - no retry producer configured",
+                extra={"message_id": context.message_id, "topic": msg.topic()}
+            )
+            return
+        
         context.attempt_count += 1
         
+        # Calculate exponential backoff: base_delay * (2 ^ attempt - 1) with jitter
+        backoff_factor = 2 ** (context.attempt_count - 1)
+        backoff_ms = self.retry_backoff_ms * backoff_factor
+        
+        # Add jitter (±25%) to prevent thundering herd
+        import random
+        jitter = random.uniform(0.75, 1.25)
+        final_backoff_ms = backoff_ms * jitter
+        
         logger.info(
-            "Scheduling message retry",
+            "Scheduling message retry with exponential backoff",
             extra={
                 "message_id": context.message_id,
                 "topic": msg.topic(),
                 "attempt_count": context.attempt_count,
                 "max_retries": self.max_retries,
-                "backoff_ms": self.retry_backoff_ms * context.attempt_count
+                "backoff_ms": final_backoff_ms,
+                "backoff_factor": backoff_factor
             }
         )
         
-        # In production, you'd use a proper retry mechanism:
-        # - Redis/database queue with delayed execution
-        # - Separate retry topic with time-based processing
-        # - In-memory scheduler with exponential backoff
-        # For now, we just log the retry intent
+        # Cancel any existing timer for this message
+        existing_timer = self._retry_timers.get(context.message_id)
+        if existing_timer:
+            existing_timer.cancel()
+        
+        # Schedule the retry
+        timer = threading.Timer(
+            final_backoff_ms / 1000.0,  # Convert to seconds
+            self._execute_retry,
+            args=(context, msg)
+        )
+        
+        self._retry_timers[context.message_id] = timer
+        timer.start()
+    
+    def _execute_retry(self, context: DeliveryContext, original_msg: Message) -> None:
+        """Execute the actual retry of a message.
+        
+        Args:
+            context (DeliveryContext): Context of the message to retry.
+            original_msg (Message): The original message that failed.
+        
+        Returns:
+            None
+        """
+        # Remove the completed timer
+        self._retry_timers.pop(context.message_id, None)
+        
+        if self._shutdown:
+            logger.info(
+                "Skipping retry - handler is shutting down",
+                extra={"message_id": context.message_id}
+            )
+            return
+        
+        if not self._retry_producer:
+            logger.error(
+                "Cannot execute retry - no retry producer configured",
+                extra={"message_id": context.message_id}
+            )
+            return
+        
+        try:
+            # Extract original message data from context
+            original_data = context.metadata.get('_original_message', {})
+            topic = original_msg.topic()
+            
+            if not topic:
+                raise ValueError("Original message has no topic")
+            
+            logger.info(
+                "Executing message retry",
+                extra={
+                    "message_id": context.message_id,
+                    "topic": topic,
+                    "attempt_count": context.attempt_count
+                }
+            )
+            
+            # Reproduce the message with retry headers
+            retry_headers = original_data.get('headers', {}).copy()
+            retry_headers.update({
+                'retry_attempt': str(context.attempt_count),
+                'original_timestamp': str(context.original_timestamp),
+                'retry_timestamp': str(time.time())
+            })
+            
+            # Send the retry message
+            self._retry_producer.produce(
+                topic=topic,
+                key=original_data.get('key'),
+                value=original_data.get('value'),
+                headers=retry_headers,
+                partition=original_data.get('partition'),
+                on_delivery=self.handle_delivery  # Use same delivery handler
+            )
+            
+            # Report retry metrics
+            if self.metrics_callback:
+                self.metrics_callback("kafka.message.retry_attempted", {
+                    "topic": topic,
+                    "attempt_count": context.attempt_count,
+                    "message_id": context.message_id
+                })
+                
+        except Exception as retry_err:
+            logger.error(
+                "Failed to execute message retry",
+                exc_info=True,
+                extra={
+                    "message_id": context.message_id,
+                    "topic": original_msg.topic(),
+                    "attempt_count": context.attempt_count,
+                    "retry_error": str(retry_err)
+                }
+            )
+            
+            # Treat retry execution failure as terminal
+            self._handle_terminal_failure(
+                context, 
+                original_msg, 
+                KafkaError(KafkaError.UNKNOWN, f"Retry execution failed: {retry_err}"),
+                DeliveryStatus.FATAL_ERROR
+            )
     
     def _handle_terminal_failure(self, context: DeliveryContext, msg: Message, err: KafkaError, status: DeliveryStatus) -> None:
         """Handle messages that cannot be retried.
@@ -318,6 +496,17 @@ class DeliveryHandler:
         
         return str(value)
     
+    def _serialize_for_dlq(self, obj: Any) -> Any:
+        """Recursively serialize objects for JSON serialization in DLQ."""
+        if isinstance(obj, bytes):
+            return obj.decode('utf-8', errors='replace')
+        elif isinstance(obj, dict):
+            return {k: self._serialize_for_dlq(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [self._serialize_for_dlq(item) for item in obj]
+        else:
+            return obj
+    
     def _send_to_dlq(self, context: DeliveryContext, original_msg: Message, err: KafkaError) -> None:
         """Send failed message to Dead Letter Queue with error context.
         
@@ -329,50 +518,137 @@ class DeliveryHandler:
         Returns:
             None
         """
+        if not self._dlq_producer or not self.dlq_topic:
+            logger.warning(
+                "DLQ not configured or producer unavailable, logging failed message",
+                extra={
+                    "message_id": context.message_id,
+                    "original_topic": original_msg.topic(),
+                    "failure_reason": str(err)
+                }
+            )
+            return
+        
+        # Create comprehensive DLQ payload
+        offset = original_msg.offset()
+        headers = original_msg.headers()
+        key = original_msg.key()
+        
         dlq_payload = {
             "original_topic": original_msg.topic(),
             "original_partition": original_msg.partition(),
+            "original_offset": offset if offset and offset >= 0 else None,
             "message_id": context.message_id,
             "failure_reason": str(err),
             "error_code": err.code(),
             "attempt_count": context.attempt_count,
             "original_timestamp": context.original_timestamp,
             "failure_timestamp": time.time(),
+            "original_headers": {k: v.decode('utf-8', errors='replace') if isinstance(v, bytes) else str(v) 
+                               for k, v in headers} if headers else {},
+            "original_key": self._safe_decode_value(key),
             "original_value": self._safe_decode_value(original_msg.value()),
-            "metadata": context.metadata
+            "metadata": self._serialize_for_dlq(context.metadata)
         }
         
-        logger.info(
-            "Sending message to DLQ",
-            extra={
-                "message_id": context.message_id,
-                "original_topic": original_msg.topic(),
-                "dlq_topic": self.dlq_topic
+        try:
+            # Serialize payload to JSON
+            dlq_message = json.dumps(dlq_payload, ensure_ascii=False)
+            
+            # Create DLQ headers with additional context
+            dlq_headers = {
+                'dlq.original_topic': original_msg.topic(),
+                'dlq.message_id': context.message_id,
+                'dlq.failure_code': str(err.code()),
+                'dlq.failure_reason': str(err),
+                'dlq.attempt_count': str(context.attempt_count),
+                'dlq.timestamp': str(int(time.time() * 1000))
             }
-        )
+            
+            # Send to DLQ with synchronous delivery for reliability
+            self._dlq_producer.produce(
+                topic=self.dlq_topic,
+                key=context.message_id,  # Use message_id as key for partitioning
+                value=dlq_message,
+                headers=dlq_headers,
+                on_delivery=self._dlq_delivery_callback
+            )
+            
+            # Flush immediately to ensure DLQ message is sent
+            self._dlq_producer.flush(timeout=10.0)
+            
+            logger.info(
+                "Message sent to DLQ successfully",
+                extra={
+                    "message_id": context.message_id,
+                    "original_topic": original_msg.topic(),
+                    "dlq_topic": self.dlq_topic,
+                    "attempt_count": context.attempt_count
+                }
+            )
+            
+        except Exception as dlq_err:
+            logger.error(
+                "Failed to send message to DLQ",
+                exc_info=True,
+                extra={
+                    "message_id": context.message_id,
+                    "original_topic": original_msg.topic(),
+                    "dlq_topic": self.dlq_topic,
+                    "dlq_error": str(dlq_err),
+                    "original_failure": str(err)
+                }
+            )
+    
+    def _dlq_delivery_callback(self, err: Optional[KafkaError], msg: Message) -> None:
+        """Callback for DLQ message delivery."""
+        if err is not None:
+            logger.error(
+                "DLQ message delivery failed",
+                extra={
+                    "dlq_topic": msg.topic() if msg else self.dlq_topic,
+                    "error": str(err)
+                }
+            )
+        else:
+            logger.debug(
+                "DLQ message delivered successfully",
+                extra={
+                    "dlq_topic": msg.topic(),
+                    "partition": msg.partition(),
+                    "offset": msg.offset()
+                }
+            )
+    
+    def close(self) -> None:
+        """Close the DLQ producer, cancel retry timers, and clean up resources."""
+        logger.info("Shutting down delivery handler")
+        self._shutdown = True
         
-        dlq_payload = {
-            "original_topic": original_msg.topic(),
-            "original_partition": original_msg.partition(),
-            "message_id": context.message_id,
-            "failure_reason": str(err),
-            "error_code": err.code(),
-            "attempt_count": context.attempt_count,
-            "original_timestamp": context.original_timestamp,
-            "failure_timestamp": time.time(),
-            "original_value": self._safe_decode_value(original_msg.value()),
-            "metadata": context.metadata
-        }
+        # Cancel all pending retry timers
+        for message_id, timer in self._retry_timers.items():
+            try:
+                timer.cancel()
+                logger.debug(f"Cancelled retry timer for message {message_id}")
+            except Exception as e:
+                logger.warning(f"Error cancelling retry timer for message {message_id}: {e}")
         
-        logger.info(
-            "Sending message to DLQ",
-            extra={
-                "message_id": context.message_id,
-                "original_topic": original_msg.topic(),
-                "dlq_topic": self.dlq_topic
-            }
-        )
+        self._retry_timers.clear()
         
-        # In production, you'd send this to the DLQ topic
-        # For now, we just log the DLQ payload
-        logger.debug("DLQ payload", extra={"dlq_payload": dlq_payload})
+        # Close DLQ producer
+        if self._dlq_producer:
+            try:
+                # Flush any pending DLQ messages
+                remaining = self._dlq_producer.flush(timeout=30.0)
+                if remaining > 0:
+                    logger.warning(f"Failed to flush {remaining} DLQ messages on close")
+                    
+                logger.info("DLQ producer closed successfully")
+            except Exception as e:
+                logger.error(f"Error closing DLQ producer: {e}")
+            finally:
+                self._dlq_producer = None
+        
+        # Clear pending messages
+        self._pending_messages.clear()
+        logger.info("Delivery handler shutdown complete")

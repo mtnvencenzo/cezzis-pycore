@@ -6,25 +6,24 @@ import time
 import uuid
 
 from cezzis_kafka.delivery_handler import DeliveryHandler
+from cezzis_kafka.kafka_publisher_settings import KafkaPublisherSettings
 
 logger = logging.getLogger(__name__)
 
 class KafkaPublisher:
     """Enterprise Kafka publisher with robust delivery handling."""
     
-    def __init__(
-        self, 
-        broker_url: str,
-        max_retries: int = 3,
-        dlq_topic: Optional[str] = None,
-        metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
-        producer_config: Optional[Dict[str, Any]] = None
-    ):
-        self.broker_url = broker_url
+    def __init__(self, settings: KafkaPublisherSettings):
+        """Initialize the KafkaPublisher with settings.
+        
+        Args:
+            settings (KafkaPublisherSettings): Configuration settings for the publisher.
+        """
+        self.settings = settings
         
         # Default producer configuration
         config = {
-            'bootstrap.servers': broker_url,
+            'bootstrap.servers': settings.bootstrap_servers,
             'acks': 'all',  # Wait for all replicas
             'retries': 0,   # We handle retries in delivery callback
             'max.in.flight.requests.per.connection': 1,  # Ensure ordering
@@ -32,16 +31,22 @@ class KafkaPublisher:
             'compression.type': 'snappy',  # Efficient compression
         }
         
-        # Override with user config
-        if producer_config:
-            config.update(producer_config)
+        # Override with user config from settings
+        config.update(settings.producer_config)
         
         self._producer = Producer(config)
         self._delivery_handler = DeliveryHandler(
-            max_retries=max_retries,
-            dlq_topic=dlq_topic,
-            metrics_callback=metrics_callback
+            max_retries=settings.max_retries,
+            dlq_topic=settings.dlq_topic,
+            metrics_callback=settings.metrics_callback,
+            bootstrap_servers=settings.bootstrap_servers,
+            retry_producer=self._producer  # Pass producer for retries
         )
+    
+    @property
+    def broker_url(self) -> str:
+        """Get the broker URL for backward compatibility."""
+        return self.settings.bootstrap_servers
 
     def send(
         self,
@@ -74,8 +79,21 @@ class KafkaPublisher:
         final_headers = {**(headers or {})}
         final_headers['message_id'] = message_id
         
-        # Register for delivery tracking
-        self._delivery_handler.track_message(message_id, topic, metadata or {})
+        # Capture original message data for potential retries
+        original_message_data = {
+            'value': message,
+            'key': key,
+            'headers': final_headers,
+            'topic': topic  # Store topic for validation
+        }
+        
+        # Register for delivery tracking with original message data
+        self._delivery_handler.track_message(
+            message_id, 
+            topic, 
+            metadata or {}, 
+            original_message_data
+        )
         
         try:
             self._producer.produce(
@@ -129,7 +147,13 @@ class KafkaPublisher:
     
     def close(self) -> None:
         """Close the producer and ensure all messages are delivered."""
+        # First flush any pending messages
         self.flush()
+        
+        # Close the delivery handler (which will close DLQ producer and cancel retries)
+        self._delivery_handler.close()
+        
+        logger.info("Kafka publisher closed successfully")
 
 
     def _generate_message_id(self, topic: str) -> str:
