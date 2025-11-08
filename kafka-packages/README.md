@@ -4,18 +4,49 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-A lightweight, production-ready Python library for working with Apache Kafka. Simplifies message consumption and processing with built-in error handling, multi-process support, and structured logging.
+A comprehensive, production-ready Python library for Apache Kafka. Provides both **consumer** and **producer** functionality with enterprise-grade features including retry mechanisms, dead letter queues (DLQ), delivery tracking, and robust error handling.
 
 ## ✨ Features
 
-- 🔄 **Easy Consumer Management** - Simple, intuitive API for Kafka message consumption
-- 🏗️ **Abstract Processor Interface** - Clean separation of concerns with `IKafkaMessageProcessor`
-- ⚡ **Multi-Process Support** - Built-in support for parallel consumer processes
-- 🛡️ **Robust Error Handling** - Comprehensive error handling with automatic retries
-- 📊 **Structured Logging** - Rich, contextual logging for observability
-- 🔌 **Confluent Kafka Integration** - Built on the reliable `confluent-kafka` client
+### 🔄 **Consumer Features**
+- Easy Consumer Management with intuitive API
+- Abstract Processor Interface for clean separation of concerns
+- Multi-Process Support for parallel message processing
+- Robust Error Handling with automatic retries
+- Structured Logging for comprehensive observability
 
-## 📦 Installation
+### 📤 **Producer Features** 
+- **Enterprise Delivery Handler** - Advanced retry logic with exponential backoff
+- **Dead Letter Queue (DLQ)** - Automatic routing of failed messages
+- **Delivery Tracking** - Comprehensive delivery status monitoring
+- **Settings-Based Configuration** - Consistent, validated configuration management
+- **Metrics Integration** - Built-in hooks for monitoring and observability
+- **Thread-Safe Operations** - Concurrent publishing with proper resource management
+
+### 🛡️ **Shared Features**
+- Built on reliable Confluent Kafka client
+- Comprehensive error classification and handling
+- Production-ready with extensive test coverage (207+ tests)
+- Type hints and comprehensive documentation
+
+## � Table of Contents
+
+- [📦 Installation](#-installation)
+- [🚀 Quick Start](#-quick-start)
+  - [🔽 Consumer Quick Start](#-consumer-quick-start) 
+  - [📤 Producer Quick Start](#-producer-quick-start)
+- [🔽 Consumer Guide](#-consumer-guide)
+  - [Creating Message Processors](#creating-message-processors)
+  - [Multi-Process Consumption](#multi-process-consumption)
+- [📤 Producer Guide](#-producer-guide)
+  - [Basic Publishing](#basic-publishing)
+  - [Advanced Features](#advanced-features)
+  - [Enterprise Delivery Handling](#enterprise-delivery-handling)
+- [📚 API Reference](#-api-reference)
+- [🛠️ Development](#️-development)
+- [🧪 Testing](#-testing)
+
+## �📦 Installation
 
 ### Using Poetry (Recommended)
 
@@ -31,7 +62,12 @@ pip install cezzis-kafka
 
 ## 🚀 Quick Start
 
-### 1. Create Your Message Processor
+### 🔽 Consumer Quick Start
+
+<details>
+<summary>Click to expand consumer quick start example</summary>
+
+#### 1. Create Your Message Processor
 
 Implement the `IKafkaMessageProcessor` interface to define how messages should be processed:
 
@@ -79,7 +115,7 @@ class MyMessageProcessor(IKafkaMessageProcessor):
         print(f"Reached end of partition: {msg.partition()}")
 ```
 
-### 2. Configure and Start the Consumer
+#### 2. Configure and Start the Consumer
 
 ```python
 from cezzis_kafka import KafkaConsumerSettings, start_consumer
@@ -102,28 +138,298 @@ stop_event = Event()
 start_consumer(stop_event, processor)
 ```
 
-### 3. Multi-Process Consumer
+</details>
 
-Run multiple consumer processes for better throughput using `spawn_consumers`:
+### 📤 Producer Quick Start
+
+<details>
+<summary>Click to expand producer quick start example</summary>
+
+#### 1. Basic Message Publishing
 
 ```python
-from cezzis_kafka import spawn_consumers
-from multiprocessing import Event
+from cezzis_kafka import KafkaPublisher, KafkaPublisherSettings
 
-# Create a stop event for graceful shutdown
-stop_event = Event()
-
-# Spawn 3 consumer processes
-spawn_consumers(
-    factory_type=MyMessageProcessor,
-    num_consumers=3,
-    stop_event=stop_event,
-    bootstrap_servers="localhost:9092",
-    consumer_group="my-consumer-group",
-    topic_name="my-topic"
+# Configure publisher settings
+settings = KafkaPublisherSettings(
+    bootstrap_servers="localhost:9092"
 )
+
+# Create publisher
+publisher = KafkaPublisher(settings)
+
+# Send a simple message
+publisher.send(
+    topic="my-topic",
+    message="Hello, Kafka!",
+    message_id="msg-001"  # Optional: auto-generated if not provided
+)
+
+# Send with headers and key
+publisher.send(
+    topic="user-events",
+    message={"user_id": 123, "action": "login"},
+    key="user-123",
+    headers={"content-type": "application/json", "version": "v1"}
+)
+
+# Ensure all messages are sent
+publisher.flush()
+publisher.close()
 ```
 
+</details>
+
+### Enterprise Publishing with Retry & DLQ
+
+For production environments, configure automatic retries and dead letter queue handling:
+
+```python
+from cezzis_kafka import KafkaPublisher, KafkaPublisherSettings, DeliveryHandler
+from cezzis_kafka.delivery_handler import DeliveryContext, DeliveryStatus
+import json
+
+# Enterprise producer configuration
+settings = KafkaPublisherSettings(
+    bootstrap_servers="localhost:9092",
+    topic_name="orders",
+    client_id="order-service",
+    
+    # Kafka producer optimizations
+    acks="all",                    # Wait for all replicas
+    retries=3,                     # Kafka-level retries
+    batch_size=16384,              # Batch messages for efficiency
+    linger_ms=10,                  # Wait up to 10ms to batch
+    compression_type="snappy",     # Compress messages
+    max_in_flight_requests_per_connection=5,
+    
+    # DLQ configuration
+    dlq_topic_name="orders-dlq",
+    
+    # Retry settings
+    enable_retry=True,
+    max_retry_attempts=3,
+    base_delay_seconds=1.0,        # Start with 1 second delay
+    max_delay_seconds=30.0,        # Cap at 30 seconds
+    backoff_multiplier=2.0         # Exponential backoff
+)
+
+# Custom delivery handler for monitoring
+class OrderDeliveryHandler(DeliveryHandler):
+    def __init__(self, settings: KafkaPublisherSettings):
+        super().__init__(settings)
+        self._success_count = 0
+        self._failure_count = 0
+    
+    def on_delivery_success(self, context: DeliveryContext) -> None:
+        super().on_delivery_success(context)
+        self._success_count += 1
+        print(f"✅ Order {context.key} delivered successfully")
+    
+    def on_delivery_failure(self, context: DeliveryContext, error: Exception) -> None:
+        self._failure_count += 1
+        print(f"❌ Order {context.key} delivery failed: {error}")
+        super().on_delivery_failure(context, error)
+    
+    def on_retry_scheduled(self, context: DeliveryContext, delay: float, attempt: int) -> None:
+        print(f"🔄 Retry {attempt} scheduled for order {context.key} in {delay:.1f}s")
+    
+    def on_dlq_sent(self, context: DeliveryContext, error: Exception) -> None:
+        print(f"💀 Order {context.key} sent to DLQ after max retries: {error}")
+
+# Initialize publisher with custom handler
+publisher = KafkaPublisher(settings, delivery_handler=OrderDeliveryHandler(settings))
+
+# Publish messages with automatic retry/DLQ
+order_data = {"id": "12345", "product": "Premium Widget", "quantity": 5}
+message = json.dumps(order_data)
+
+try:
+    future = publisher.send(key=f"order-{order_data['id']}", value=message)
+    result = future.get(timeout=30)
+    print(f"Message delivered to partition {result.partition}, offset {result.offset}")
+except Exception as e:
+    print(f"Final delivery failure: {e}")
+
+# Graceful shutdown (important for retry cleanup)
+publisher.close()
+```
+
+### Batch Publishing with Error Handling
+
+For high-throughput scenarios:
+
+```python
+import asyncio
+from concurrent.futures import as_completed
+
+async def publish_order_batch(publisher: KafkaPublisher, orders: list):
+    """Publish a batch of orders with concurrent processing."""
+    futures = []
+    
+    for order in orders:
+        message = json.dumps(order)
+        future = publisher.send(
+            key=f"order-{order['id']}", 
+            value=message
+        )
+        futures.append((future, order['id']))
+    
+    # Wait for all deliveries with timeout
+    successful = 0
+    failed = 0
+    
+    for future, order_id in futures:
+        try:
+            result = future.get(timeout=30)
+            successful += 1
+            print(f"Order {order_id}: partition={result.partition}, offset={result.offset}")
+        except Exception as e:
+            failed += 1
+            print(f"Order {order_id} failed: {e}")
+    
+    return {"successful": successful, "failed": failed}
+
+# Example usage
+orders = [
+    {"id": "1001", "product": "Widget A", "quantity": 5},
+    {"id": "1002", "product": "Widget B", "quantity": 3},
+    {"id": "1003", "product": "Widget C", "quantity": 8},
+    # ... more orders
+]
+
+stats = asyncio.run(publish_order_batch(publisher, orders))
+print(f"Batch complete: {stats['successful']} successful, {stats['failed']} failed")
+```
+
+## 🔽 Consumer Guide
+
+### Creating Message Processors
+
+The `IKafkaMessageProcessor` interface provides lifecycle hooks for comprehensive message handling:
+
+```python
+from cezzis_kafka import IKafkaMessageProcessor, KafkaConsumerSettings
+from confluent_kafka import Consumer, Message
+import json
+
+class OrderProcessor(IKafkaMessageProcessor):
+    def __init__(self, settings: KafkaConsumerSettings):
+        self._settings = settings
+        self._processed_count = 0
+    
+    @staticmethod
+    def CreateNew(kafka_settings: KafkaConsumerSettings) -> "OrderProcessor":
+        return OrderProcessor(kafka_settings)
+    
+    def kafka_settings(self) -> KafkaConsumerSettings:
+        return self._settings
+    
+    def message_received(self, msg: Message) -> None:
+        """Process order messages."""
+        try:
+            order_data = json.loads(msg.value().decode('utf-8'))
+            self._process_order(order_data)
+            self._processed_count += 1
+            print(f"Processed order {order_data.get('id')} - Total: {self._processed_count}")
+        except json.JSONDecodeError:
+            print(f"Invalid JSON in message: {msg.value()}")
+        except Exception as e:
+            print(f"Error processing order: {e}")
+    
+    def _process_order(self, order_data: dict) -> None:
+        # Your business logic here
+        pass
+```
+
+### Multi-Process Consumption
+
+For high-throughput scenarios, run multiple consumer processes:
+
+```python
+# multi_consumer.py
+from multiprocessing import Process, Event
+import signal
+import sys
+
+def run_consumer_process(consumer_id: int, shared_stop_event: Event):
+    """Run a consumer in a separate process."""
+    from cezzis_kafka import KafkaConsumerSettings, start_consumer
+    
+    settings = KafkaConsumerSettings(
+        consumer_id=consumer_id,
+        bootstrap_servers="localhost:9092",
+        consumer_group="order-processing-group",
+        topic_name="orders",
+        num_consumers=1
+    )
+    
+    processor = OrderProcessor.CreateNew(settings)
+    start_consumer(shared_stop_event, processor)
+
+if __name__ == "__main__":
+    # Number of consumer processes
+    num_processes = 4
+    shared_stop_event = Event()
+    
+    # Start consumer processes
+    processes = []
+    for i in range(num_processes):
+        p = Process(target=run_consumer_process, args=(i, shared_stop_event))
+        p.start()
+        processes.append(p)
+        print(f"Started consumer process {i}")
+    
+    def signal_handler(sig, frame):
+        print("\nShutting down consumers...")
+        shared_stop_event.set()
+        for p in processes:
+            p.join(timeout=10)
+        sys.exit(0)
+    
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
+    # Wait for processes
+    for p in processes:
+        p.join()
+```
+
+</details>
+
+## 🔼 Producer Guide
+
+The Kafka producer enables high-performance, reliable message publishing with enterprise-grade features including automatic retries, dead letter queues (DLQ), and comprehensive error handling.
+
+### <details><summary>Quick Start - Producer</summary>
+
+```python
+from cezzis_kafka import KafkaPublisher, KafkaPublisherSettings
+import json
+
+# Basic producer setup
+settings = KafkaPublisherSettings(
+    bootstrap_servers="localhost:9092",
+    topic_name="orders"
+)
+
+publisher = KafkaPublisher(settings)
+
+# Send a message
+order_data = {"id": "12345", "product": "Widget", "quantity": 10}
+message = json.dumps(order_data)
+
+future = publisher.send(key="order-12345", value=message)
+result = future.get(timeout=30)  # Wait for delivery confirmation
+
+print(f"Message delivered: partition={result.partition}, offset={result.offset}")
+```
+
+</details>
+
+### Enterprise Publishing with Retry & DLQ
+
+For production environments, configure automatic retries and dead letter queue handling:
 The `spawn_consumers` function will:
 - Create the specified number of consumer processes
 - Assign each a unique `consumer_id` (0, 1, 2, ...)
@@ -196,6 +502,198 @@ Starts a single Kafka consumer that polls for messages and processes them using 
 processor = MyMessageProcessor.CreateNew(settings)
 start_consumer(stop_event, processor)
 ```
+
+### 🔼 Producer API Reference
+
+### `KafkaPublisherSettings`
+
+Configuration class for Kafka publishers with comprehensive settings for production use.
+
+**Core Attributes:**
+- `bootstrap_servers` (str): Comma-separated list of Kafka broker addresses
+- `topic_name` (str): Default topic name for message publishing
+- `client_id` (str, optional): Unique identifier for the producer client
+
+**Kafka Producer Configuration:**
+- `acks` (str, default="1"): Acknowledgment level ("0", "1", "all")
+- `retries` (int, default=3): Number of Kafka-level retries
+- `batch_size` (int, default=16384): Number of bytes to batch before sending
+- `linger_ms` (int, default=0): Time to wait for batching (milliseconds)
+- `compression_type` (str, optional): Compression algorithm ("gzip", "snappy", "lz4", "zstd")
+- `max_in_flight_requests_per_connection` (int, default=5): Maximum unacknowledged requests
+
+**Retry & DLQ Configuration:**
+- `enable_retry` (bool, default=False): Enable application-level retry mechanism
+- `max_retry_attempts` (int, default=3): Maximum number of retry attempts
+- `base_delay_seconds` (float, default=1.0): Initial retry delay
+- `max_delay_seconds` (float, default=60.0): Maximum retry delay cap
+- `backoff_multiplier` (float, default=2.0): Exponential backoff multiplier
+- `dlq_topic_name` (str, optional): Dead letter queue topic name
+
+### `KafkaPublisher`
+
+High-performance Kafka producer with enterprise features.
+
+**Constructor:**
+```python
+KafkaPublisher(settings: KafkaPublisherSettings, delivery_handler: DeliveryHandler = None)
+```
+
+**Methods:**
+
+- `send(topic: str = None, key: str = None, value: str = None, headers: dict = None, message_id: str = None) -> Future`: Send a message and return a Future for the delivery result
+- `flush(timeout: float = None) -> None`: Flush all pending messages with optional timeout
+- `close()`: Gracefully shutdown the producer with proper resource cleanup
+
+### `DeliveryHandler`
+
+Base class for handling message delivery callbacks with retry and DLQ functionality.
+
+**Constructor:**
+```python
+DeliveryHandler(settings: KafkaPublisherSettings)
+```
+
+**Key Methods (Override for custom behavior):**
+
+- `on_delivery_success(context: DeliveryContext) -> None`: Called on successful delivery
+- `on_delivery_failure(context: DeliveryContext, error: Exception) -> None`: Called on delivery failure (triggers retry logic)
+- `on_retry_scheduled(context: DeliveryContext, delay: float, attempt: int) -> None`: Called when retry is scheduled
+- `on_dlq_sent(context: DeliveryContext, error: Exception) -> None`: Called when message is sent to DLQ
+- `shutdown() -> None`: Cleanup method for graceful shutdown
+
+**Built-in Error Classification:**
+- **Retriable errors**: Network timeouts, broker unavailability, leader not available
+- **Non-retriable errors**: Authentication failures, message too large, unknown topics
+- **Terminal errors**: Serialization errors, invalid configurations
+
+### `DeliveryContext`
+
+Context object containing message delivery information.
+
+**Attributes:**
+- `key` (str): Message key
+- `value` (str): Message value  
+- `topic` (str): Destination topic
+- `headers` (dict): Message headers
+- `message_id` (str): Unique message identifier
+- `attempt_count` (int): Current retry attempt number
+- `status` (DeliveryStatus): Current delivery status
+
+### `DeliveryStatus`
+
+Enumeration of message delivery states.
+
+**Values:**
+- `PENDING`: Message queued for delivery
+- `SUCCESS`: Message delivered successfully
+- `FAILED`: Message delivery failed
+- `RETRY_SCHEDULED`: Retry scheduled for failed message
+- `DLQ_SENT`: Message sent to dead letter queue
+
+## 🏢 Enterprise Features
+
+### Automatic Retry Mechanism
+
+The producer includes a sophisticated retry mechanism using `threading.Timer` for in-memory scheduling:
+
+- **Exponential backoff**: Delays increase exponentially between retry attempts (1s, 2s, 4s, 8s...)
+- **Configurable limits**: Set maximum retry attempts and delay caps
+- **Error classification**: Intelligent handling of different error types (retriable vs terminal)
+- **Thread safety**: Safe for concurrent use in multi-threaded applications
+
+### Dead Letter Queue (DLQ) Support
+
+Messages that exceed retry limits are automatically routed to a dead letter queue:
+
+- **Automatic routing**: Terminal failures and retry exhaustion handled transparently
+- **Error preservation**: Original error information and context preserved in DLQ messages
+- **Configurable topics**: Specify custom DLQ topic names per publisher
+- **Message enrichment**: DLQ messages include failure reason and retry history
+
+### Error Classification System
+
+Built-in intelligence for categorizing and handling different error types:
+
+**Retriable Errors** (automatically retried):
+- Network timeouts and connection issues
+- Broker temporarily unavailable
+- Leader not available for partition
+- Request timeouts
+
+**Non-Retriable Errors** (sent directly to DLQ):
+- Authentication and authorization failures
+- Message size exceeds broker limits
+- Unknown or invalid topic names
+- Serialization errors
+
+### Metrics and Monitoring
+
+Extensible metrics system for production monitoring:
+
+```python
+class MetricsDeliveryHandler(DeliveryHandler):
+    def on_delivery_success(self, context: DeliveryContext) -> None:
+        super().on_delivery_success(context)
+        metrics.increment("kafka.messages.delivered.success")
+        
+    def on_delivery_failure(self, context: DeliveryContext, error: Exception) -> None:
+        super().on_delivery_failure(context, error)
+        metrics.increment("kafka.messages.delivered.failed")
+        
+    def on_dlq_sent(self, context: DeliveryContext, error: Exception) -> None:
+        super().on_dlq_sent(context, error)
+        metrics.increment("kafka.messages.dlq")
+```
+
+## 🎯 Best Practices
+
+### Producer Configuration
+
+**High Throughput:**
+```python
+settings = KafkaPublisherSettings(
+    batch_size=32768,           # Larger batches
+    linger_ms=50,               # Allow more batching time
+    compression_type="lz4",     # Fast compression
+    acks="1"                    # Balance reliability/performance
+)
+```
+
+**High Reliability:**
+```python
+settings = KafkaPublisherSettings(
+    acks="all",                 # Wait for all replicas
+    retries=10,                 # More Kafka-level retries
+    enable_retry=True,          # Application-level retries
+    max_retry_attempts=5,       # Comprehensive retry coverage
+    dlq_topic_name="critical-dlq"  # Capture all failures
+)
+```
+
+**Low Latency:**
+```python
+settings = KafkaPublisherSettings(
+    batch_size=1,               # Minimal batching
+    linger_ms=0,                # Send immediately
+    acks="1",                   # Fast acknowledgment
+    compression_type=None       # No compression overhead
+)
+```
+
+### Error Handling Strategies
+
+1. **Graceful Degradation**: Implement fallback mechanisms for critical failures
+2. **Circuit Breaker**: Stop publishing during sustained failures to prevent resource exhaustion
+3. **Rate Limiting**: Control publish rates during recovery periods
+4. **Health Checks**: Monitor producer health and delivery success rates
+
+### Resource Management
+
+- **Connection Pooling**: Reuse producer instances across your application
+- **Graceful Shutdown**: Always call `publisher.close()` to ensure message delivery completion
+- **Memory Management**: Monitor delivery handler state for long-running applications
+- **Thread Safety**: DeliveryHandler is thread-safe and can handle concurrent deliveries
 
 ## 🛠️ Development
 
