@@ -718,48 +718,6 @@ make ruff-format   # Format code
 poetry build
 ```
 
-## 🧪 Testing with Local Kafka
-
-### Using Docker Compose
-
-```bash
-# Start local Kafka cluster
-docker run -d \
-  --name kafka \
-  -p 9092:9092 \
-  -e KAFKA_ENABLE_KRAFT=yes \
-  -e KAFKA_CFG_PROCESS_ROLES=broker,controller \
-  -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER \
-  -e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
-  -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
-  -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
-  -e KAFKA_BROKER_ID=1 \
-  -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
-  bitnami/kafka:latest
-
-# Create a test topic
-docker exec kafka kafka-topics.sh \
-  --create \
-  --topic test-topic \
-  --bootstrap-server localhost:9092 \
-  --partitions 3 \
-  --replication-factor 1
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](../.github/CONTRIBUTING.md) for details.
-
-### Development Workflow
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests and linting (`make test && make standards`)
-5. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
@@ -784,4 +742,3 @@ Built with:
 
 ---
 
-**Made with ❤️ by the Cezzis team**
