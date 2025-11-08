@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Dict, Any
+from typing import Any, Callable, Dict, Optional
 
 
 class KafkaPublisherSettings:
@@ -20,7 +20,7 @@ class KafkaPublisherSettings:
         max_retries: int = 3,
         dlq_topic: Optional[str] = None,
         metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
-        producer_config: Optional[Dict[str, Any]] = None
+        producer_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize the KafkaPublisherSettings
 
@@ -37,7 +37,7 @@ class KafkaPublisherSettings:
         """
         if not bootstrap_servers or bootstrap_servers.strip() == "":
             raise ValueError("Bootstrap servers cannot be empty")
-        
+
         if max_retries < 0:
             raise ValueError("Max retries cannot be negative")
 

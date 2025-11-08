@@ -1,17 +1,19 @@
-from dataclasses import dataclass, field
 import time
+from dataclasses import dataclass, field
 from typing import Any, Dict
+
 
 @dataclass
 class DeliveryContext:
     """Context information for message delivery tracking.
-    
+
     Attributes:
         message_id (str): Unique identifier for the message.
         topic (str): Kafka topic to which the message was sent.
         attempt_count (int): Number of delivery attempts made.
         original_timestamp (float): Timestamp when the message was originally sent.
     """
+
     message_id: str
     topic: str
     attempt_count: int = 0  # Start at 0, incremented on each retry attempt
