@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Type, TypeVar
 
@@ -12,6 +13,13 @@ logger = logging.getLogger(__name__)
 
 TAsyncProcessor = TypeVar("TAsyncProcessor", bound=IAsyncKafkaMessageProcessor)
 """Type variable for IAsyncKafkaMessageProcessor or its subclasses."""
+
+# Configurable thread pool size for production flexibility
+_DEFAULT_THREAD_POOL_SIZE = int(os.getenv("KAFKA_ASYNC_THREAD_POOL_SIZE", "16"))
+
+# Shared thread pool for all Kafka async operations - production optimization
+# Sized to handle multiple consumer groups and topics efficiently
+_kafka_thread_pool = ThreadPoolExecutor(max_workers=_DEFAULT_THREAD_POOL_SIZE, thread_name_prefix="kafka_async")
 
 
 async def start_consumer_async(processor: IAsyncKafkaMessageProcessor) -> None:
@@ -62,8 +70,7 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
 
     # Run consumer creation in thread pool
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        consumer = await loop.run_in_executor(executor, create_consumer)
+    consumer = await loop.run_in_executor(_kafka_thread_pool, create_consumer)
 
     await processor.consumer_created(consumer)
 
@@ -82,8 +89,7 @@ async def _subscribe_consumer_async(consumer: Consumer, processor: IAsyncKafkaMe
         logger.info(f"Consumer subscribed to topic: {topic_name}")
 
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        await loop.run_in_executor(executor, subscribe)
+    await loop.run_in_executor(_kafka_thread_pool, subscribe)
 
     await processor.consumer_subscribed()
 
@@ -107,8 +113,7 @@ async def _start_polling_async(consumer: Consumer, processor: IAsyncKafkaMessage
                 break
 
             # Poll for message in thread pool to avoid blocking event loop
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                msg = await loop.run_in_executor(executor, poll_message, 1.0)
+            msg = await loop.run_in_executor(_kafka_thread_pool, poll_message, 1.0)
 
             if msg is None:
                 # No message received, continue polling
@@ -145,8 +150,7 @@ async def _close_consumer_async(consumer: Consumer, processor: IAsyncKafkaMessag
             logger.error(f"Error closing consumer: {e}")
 
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=1) as executor:
-        await loop.run_in_executor(executor, close_consumer)
+    await loop.run_in_executor(_kafka_thread_pool, close_consumer)
 
 
 async def spawn_consumers_async(
@@ -205,3 +209,14 @@ async def spawn_consumers_async(
         # Wait for all tasks to complete cancellation
         await asyncio.gather(*tasks, return_exceptions=True)
         logger.info("All async consumers stopped")
+
+
+def shutdown_async_kafka() -> None:
+    """Shutdown the shared thread pool for graceful application exit.
+
+    Call this during application shutdown to ensure all background threads
+    are properly closed. This is important for production deployments.
+    """
+    logger.info("Shutting down Kafka async thread pool...")
+    _kafka_thread_pool.shutdown(wait=True)
+    logger.info("Kafka async thread pool shut down successfully")
