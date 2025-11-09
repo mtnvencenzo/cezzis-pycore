@@ -161,7 +161,6 @@ The Kafka producer enables high-performance, reliable message publishing with en
 
 ### Producer Quick Start
 
-
 ```python
 from cezzis_kafka import KafkaProducer, KafkaProducerSettings
 
@@ -178,11 +177,23 @@ producer.send(
     topic="my-topic",
     message="Hello, Kafka!",
 )
+```
 
+### Synchronous Message Delivery
 
-# Ensure all messages are sent
-producer.flush()
-producer.close()
+For scenarios where you need to ensure immediate message delivery and get confirmation:
+
+```python
+# Send and wait for delivery confirmation
+try:
+    message_id = producer.send_and_wait(
+        topic="critical-topic",
+        message="Important message",
+        timeout=30.0  # Wait up to 30 seconds
+    )
+    print(f"Message {message_id} delivered successfully")
+except Exception as e:
+    print(f"Message delivery failed: {e}")
 ```
 
 
@@ -201,10 +212,62 @@ settings = KafkaProducerSettings(
         "batch.size": 32768,              # Larger batches for efficiency
         "linger.ms": 20,                  # Wait up to 20ms to batch
         "compression.type": "snappy",     # Compress messages
-        "max.in.flight.requests.per.connection": 1,  # Ensure ordering
+        "max.in.flight.requests.per.connection": 5,  # Concurrent requests
         "enable.idempotence": True,       # Prevent duplicates
+        "acks": "all",                    # Wait for all replicas (most durable)
     }
 )
+```
+
+### Best Practices for Message Delivery
+
+#### Immediate Delivery Patterns
+
+**Option 1: Use send_and_wait for critical messages**
+```python
+# Guaranteed delivery with timeout
+producer.send_and_wait(
+    topic="orders",
+    message=order_data,
+    timeout=30.0
+)
+```
+
+**Option 2: Poll + Flush pattern**
+```python
+producer.send(topic="events", message=data)
+producer.poll(0.1)  # Process delivery callbacks
+producer.flush(timeout=30.0)  # Ensure delivery
+```
+
+**Option 3: Batch processing (most efficient)**
+```python
+# Send multiple messages
+for item in batch_items:
+    producer.send(topic="batch_topic", message=item)
+
+# Flush once at the end
+producer.flush(timeout=60.0)
+```
+
+#### Performance vs Reliability Trade-offs
+
+**High Performance (less durable):**
+```python
+producer_config = {
+    "acks": "1",  # Only leader acknowledgment
+    "max.in.flight.requests.per.connection": 5,
+    "enable.idempotence": False,
+}
+```
+
+**High Reliability (slower):**
+```python
+producer_config = {
+    "acks": "all",  # All replicas must acknowledge
+    "max.in.flight.requests.per.connection": 1,
+    "enable.idempotence": True,
+}
 ```
 
 
@@ -316,13 +379,39 @@ KafkaProducer(settings: KafkaProducerSettings)
 
 **Methods:**
 
-- `send(topic: str, message: str | bytes, key: str = None, headers: dict = None, message_id: str = None, metadata: dict = None) -> str`: Send a message and return the message ID for tracking. Automatically generates message ID if not provided.
-- `flush(timeout: float = 10.0) -> None`: Flush all pending messages with optional timeout
-- `close() -> None`: Gracefully shutdown the producer with proper resource cleanup
+- `send(topic: str, message: str | bytes, key: str = None, headers: dict = None, message_id: str = None, metadata: dict = None) -> str`: Send a message asynchronously and return the message ID for tracking. Automatically generates message ID if not provided.
+
+- `send_and_wait(topic: str, message: str | bytes, key: str = None, headers: dict = None, message_id: str = None, metadata: dict = None, timeout: float = 30.0) -> str`: Send a message and wait for delivery confirmation. Raises exception if delivery fails or times out.
+
+- `flush(timeout: float = 10.0) -> None`: Wait for all pending messages to be delivered or fail within the specified timeout.
+
+- `poll(timeout: float = 0) -> int`: Poll for delivery events and trigger callbacks. Returns the number of events processed.
+
+- `get_queue_size() -> int`: Get the current number of messages waiting in the producer's internal queue.
+
+- `close() -> None`: Gracefully shutdown the producer with proper resource cleanup.
 
 **Properties:**
 - `broker_url` (str): Returns the configured bootstrap servers for backward compatibility
 - `settings` (KafkaProducerSettings): Access to the producer settings
+
+**Usage Examples:**
+
+```python
+# Asynchronous sending (fastest)
+message_id = producer.send("topic", "message")
+
+# Synchronous sending (guaranteed delivery)
+message_id = producer.send_and_wait("topic", "message", timeout=30.0)
+
+# Manual callback processing
+producer.send("topic", "message")
+producer.poll(0.1)  # Process delivery events
+
+# Monitor queue status
+if producer.get_queue_size() > 1000:
+    print("Producer queue is getting full!")
+```
 
 
 ## License

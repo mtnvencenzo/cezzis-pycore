@@ -49,7 +49,7 @@ class TestKafkaProducer:
             "retry.backoff.max.ms": 1000,
             "delivery.timeout.ms": 300000,
             "request.timeout.ms": 30000,
-            "max.in.flight.requests.per.connection": 1,
+            "max.in.flight.requests.per.connection": 5,
             "enable.idempotence": True,
             "compression.type": "snappy",
         }
@@ -73,7 +73,7 @@ class TestKafkaProducer:
             "retry.backoff.max.ms": 2000,
             "delivery.timeout.ms": 600000,
             "request.timeout.ms": 60000,
-            "max.in.flight.requests.per.connection": 1,
+            "max.in.flight.requests.per.connection": 5,
             "enable.idempotence": True,
             "compression.type": "snappy",
             "batch.size": 32768,  # From producer_config
@@ -319,3 +319,85 @@ class TestKafkaProducerErrorHandling:
         with patch("cezzis_kafka.kafka_producer.Producer", side_effect=Exception("Connection failed")):
             with pytest.raises(Exception, match="Connection failed"):
                 KafkaProducer(settings)
+
+
+class TestKafkaProducerNewMethods:
+    """Test new methods added to KafkaProducer."""
+
+    @patch("cezzis_kafka.kafka_producer.Producer")
+    def test_send_and_wait_success(self, mock_producer):
+        """Test send_and_wait method with successful delivery."""
+        # Setup
+        mock_producer_instance = Mock()
+        mock_producer_instance.flush.return_value = 0  # No messages remaining
+        mock_producer_instance.poll.return_value = 1  # 1 event processed
+        mock_producer.return_value = mock_producer_instance
+
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092")
+        producer = KafkaProducer(settings)
+
+        # Test
+        result = producer.send_and_wait("test-topic", "test-message", timeout=30.0)
+
+        # Assertions
+        assert result.startswith("test-topic_")  # Generated message ID
+        mock_producer_instance.produce.assert_called_once()
+        mock_producer_instance.poll.assert_called_once_with(0.1)
+        mock_producer_instance.flush.assert_called_once_with(30.0)
+
+    @patch("cezzis_kafka.kafka_producer.Producer")
+    def test_send_and_wait_timeout(self, mock_producer):
+        """Test send_and_wait method with timeout."""
+        # Setup
+        mock_producer_instance = Mock()
+        mock_producer_instance.flush.return_value = 2  # 2 messages remaining
+        mock_producer_instance.poll.return_value = 0  # 0 events processed
+        mock_producer.return_value = mock_producer_instance
+
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092")
+        producer = KafkaProducer(settings)
+
+        # Test
+        with pytest.raises(Exception, match="Failed to deliver message within 30.0s timeout"):
+            producer.send_and_wait("test-topic", "test-message", timeout=30.0)
+
+        # Assertions
+        mock_producer_instance.produce.assert_called_once()
+        mock_producer_instance.poll.assert_called_once_with(0.1)
+        mock_producer_instance.flush.assert_called_once_with(30.0)
+
+    @patch("cezzis_kafka.kafka_producer.Producer")
+    def test_poll_method(self, mock_producer):
+        """Test poll method for processing delivery events."""
+        # Setup
+        mock_producer_instance = Mock()
+        mock_producer_instance.poll.return_value = 3  # 3 events processed
+        mock_producer.return_value = mock_producer_instance
+
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092")
+        producer = KafkaProducer(settings)
+
+        # Test
+        result = producer.poll(timeout=1.0)
+
+        # Assertions
+        assert result == 3
+        mock_producer_instance.poll.assert_called_once_with(1.0)
+
+    @patch("cezzis_kafka.kafka_producer.Producer")
+    def test_get_queue_size(self, mock_producer):
+        """Test get_queue_size method."""
+        # Setup
+        mock_producer_instance = Mock()
+        # Configure the mock to support len() by setting __len__
+        mock_producer_instance.__len__ = Mock(return_value=5)
+        mock_producer.return_value = mock_producer_instance
+
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092")
+        producer = KafkaProducer(settings)
+
+        # Test
+        result = producer.get_queue_size()
+
+        # Assertions
+        assert result == 5

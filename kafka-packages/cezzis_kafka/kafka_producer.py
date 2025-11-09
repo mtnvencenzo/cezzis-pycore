@@ -24,15 +24,15 @@ class KafkaProducer:
         # Default producer configuration
         config = {
             "bootstrap.servers": settings.bootstrap_servers,
-            "acks": "all",  # Wait for all replicas
-            "retries": settings.max_retries,  # Use Kafka's built-in retry mechanism
+            "acks": "all",
+            "retries": settings.max_retries,
             "retry.backoff.ms": settings.retry_backoff_ms,
             "retry.backoff.max.ms": settings.retry_backoff_max_ms,
             "delivery.timeout.ms": settings.delivery_timeout_ms,
             "request.timeout.ms": settings.request_timeout_ms,
-            "max.in.flight.requests.per.connection": 1,  # Ensure ordering
-            "enable.idempotence": True,  # Prevent duplicates
-            "compression.type": "snappy",  # Efficient compression
+            "max.in.flight.requests.per.connection": 5,  # Allow more concurrent requests
+            "enable.idempotence": True,
+            "compression.type": "snappy",
         }
 
         # Override with user config from settings
@@ -100,6 +100,48 @@ class KafkaProducer:
             )
             raise
 
+    def send_and_wait(
+        self,
+        topic: str,
+        message: str | bytes,
+        key: Optional[str] = None,
+        headers: Optional[Dict[str, str | bytes]] = None,
+        message_id: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        timeout: float = 30.0,
+    ) -> str:
+        """
+        Send a message and wait for confirmation of delivery.
+
+        Args:
+            topic: Kafka topic name
+            message: Message payload
+            key: Optional message key for partitioning
+            headers: Optional message headers
+            message_id: Optional unique identifier (generated if not provided)
+            metadata: Optional metadata for tracking/metrics
+            timeout: Maximum time to wait for delivery confirmation
+
+        Returns:
+            str: Message ID for tracking
+
+        Raises:
+            Exception: If message delivery fails or times out
+        """
+        message_id = self.send(topic, message, key, headers, message_id, metadata)
+
+        # Poll to process any immediate callbacks
+        self.poll(0.1)
+
+        # Wait for delivery with appropriate timeout
+        remaining = self._producer.flush(timeout)
+        if remaining > 0:
+            raise Exception(
+                f"Failed to deliver message within {timeout}s timeout. {remaining} messages remain in queue."
+            )
+
+        return message_id
+
     def flush(self, timeout: float = 10.0) -> None:
         """Wait for all messages to be delivered or fail.
 
@@ -120,6 +162,25 @@ class KafkaProducer:
         self.flush()
 
         logger.info("Kafka producer closed successfully")
+
+    def poll(self, timeout: float = 0) -> int:
+        """Poll for delivery events and trigger callbacks.
+
+        Args:
+            timeout: Maximum time to wait for events in seconds
+
+        Returns:
+            Number of events processed
+        """
+        return self._producer.poll(timeout)
+
+    def get_queue_size(self) -> int:
+        """Get the current number of messages in the producer queue.
+
+        Returns:
+            int: Number of messages waiting to be sent
+        """
+        return len(self._producer)
 
     def _generate_message_id(self, topic: str) -> str:
         """
