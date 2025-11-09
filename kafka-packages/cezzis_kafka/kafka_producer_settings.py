@@ -8,7 +8,7 @@ class KafkaProducerSettings:
 
     Attributes:
         bootstrap_servers (str): Kafka bootstrap servers.
-        max_retries (int): Maximum number of retries for retriable errors.
+        max_retries (int): Maximum number of retries for retriable errors. Must be >= 1
         retry_backoff_ms (int): Initial backoff time in milliseconds between retries.
         retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries.
         delivery_timeout_ms (int): Total timeout for message delivery including retries.
@@ -34,7 +34,7 @@ class KafkaProducerSettings:
 
         Args:
             bootstrap_servers (str): Kafka bootstrap servers.
-            max_retries (int): Maximum number of retries for retriable errors. Defaults to 3.
+            max_retries (int): Maximum number of retries for retriable errors. Defaults to 3 and must be >= 1.
             retry_backoff_ms (int): Initial backoff time in milliseconds between retries. Defaults to 100.
             retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries. Defaults to 1000.
             delivery_timeout_ms (int): Total timeout for message delivery including retries. Defaults to 300000 (5 minutes).
