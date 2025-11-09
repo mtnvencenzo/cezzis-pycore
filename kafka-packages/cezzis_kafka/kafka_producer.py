@@ -5,19 +5,19 @@ from typing import Any, Dict, Optional
 
 from confluent_kafka import Producer
 
-from cezzis_kafka.kafka_publisher_settings import KafkaPublisherSettings
+from cezzis_kafka.kafka_producer_settings import KafkaProducerSettings
 
 logger = logging.getLogger(__name__)
 
 
-class KafkaPublisher:
-    """Enterprise Kafka publisher with robust delivery handling."""
+class KafkaProducer:
+    """Enterprise Kafka producer with robust delivery handling."""
 
-    def __init__(self, settings: KafkaPublisherSettings):
-        """Initialize the KafkaPublisher with settings.
+    def __init__(self, settings: KafkaProducerSettings):
+        """Initialize the KafkaProducer with settings.
 
         Args:
-            settings (KafkaPublisherSettings): Configuration settings for the publisher.
+            settings (KafkaProducerSettings): Configuration settings for the producer.
         """
         self.settings = settings
 
@@ -119,7 +119,7 @@ class KafkaPublisher:
         # First flush any pending messages
         self.flush()
 
-        logger.info("Kafka publisher closed successfully")
+        logger.info("Kafka producer closed successfully")
 
     def _generate_message_id(self, topic: str) -> str:
         """

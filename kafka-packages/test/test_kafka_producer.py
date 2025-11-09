@@ -1,5 +1,5 @@
 """
-Comprehensive tests for KafkaPublisher class using KafkaPublisherSettings.
+Comprehensive tests for KafkaProducer class using KafkaProducerSettings.
 """
 
 import time
@@ -8,23 +8,23 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 from confluent_kafka import KafkaError, Producer
 
-from cezzis_kafka.kafka_publisher import KafkaPublisher
-from cezzis_kafka.kafka_publisher_settings import KafkaPublisherSettings
+from cezzis_kafka.kafka_producer import KafkaProducer
+from cezzis_kafka.kafka_producer_settings import KafkaProducerSettings
 
 
-class TestKafkaPublisher:
-    """Test suite for KafkaPublisher class."""
+class TestKafkaProducer:
+    """Test suite for KafkaProducer class."""
 
     @pytest.fixture
     def basic_settings(self):
-        """Create basic KafkaPublisherSettings for testing."""
-        return KafkaPublisherSettings(bootstrap_servers="localhost:9092")
+        """Create basic KafkaProducerSettings for testing."""
+        return KafkaProducerSettings(bootstrap_servers="localhost:9092")
 
     @pytest.fixture
     def custom_settings(self):
-        """Create custom KafkaPublisherSettings for testing."""
+        """Create custom KafkaProducerSettings for testing."""
         on_delivery_callback = Mock()
-        return KafkaPublisherSettings(
+        return KafkaProducerSettings(
             bootstrap_servers="kafka1:9092,kafka2:9092",
             max_retries=5,
             retry_backoff_ms=200,
@@ -35,10 +35,10 @@ class TestKafkaPublisher:
             producer_config={"batch.size": 32768, "linger.ms": 20},
         )
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_init_with_basic_settings(self, mock_producer, basic_settings):
-        """Test KafkaPublisher initialization with basic settings."""
-        publisher = KafkaPublisher(basic_settings)
+        """Test KafkaProducer initialization with basic settings."""
+        producer = KafkaProducer(basic_settings)
 
         # Verify Producer was called with correct configuration
         expected_config = {
@@ -55,14 +55,14 @@ class TestKafkaPublisher:
         }
         mock_producer.assert_called_once_with(expected_config)
 
-        # Verify publisher attributes
-        assert publisher.settings == basic_settings
-        assert publisher.broker_url == "localhost:9092"
+        # Verify producer attributes
+        assert producer.settings == basic_settings
+        assert producer.broker_url == "localhost:9092"
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_init_with_custom_settings(self, mock_producer, custom_settings):
-        """Test KafkaPublisher initialization with custom settings."""
-        publisher = KafkaPublisher(custom_settings)
+        """Test KafkaProducer initialization with custom settings."""
+        producer = KafkaProducer(custom_settings)
 
         # Verify Producer was called with merged configuration
         expected_config = {
@@ -81,20 +81,20 @@ class TestKafkaPublisher:
         }
         mock_producer.assert_called_once_with(expected_config)
 
-        assert publisher.settings == custom_settings
-        assert publisher.broker_url == "kafka1:9092,kafka2:9092"
+        assert producer.settings == custom_settings
+        assert producer.broker_url == "kafka1:9092,kafka2:9092"
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_send_with_auto_generated_message_id(self, mock_producer, basic_settings):
         """Test sending a message with auto-generated message ID."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Mock the message ID generation
-        with patch.object(publisher, "_generate_message_id", return_value="test-msg-123"):
-            message_id = publisher.send(
+        with patch.object(producer, "_generate_message_id", return_value="test-msg-123"):
+            message_id = producer.send(
                 topic="test-topic", message="Hello, World!", key="test-key", headers={"custom": "header"}
             )
 
@@ -110,15 +110,15 @@ class TestKafkaPublisher:
             on_delivery=basic_settings.on_delivery,
         )
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_send_with_provided_message_id(self, mock_producer, custom_settings):
         """Test sending a message with provided message ID."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
 
-        publisher = KafkaPublisher(custom_settings)
+        producer = KafkaProducer(custom_settings)
 
-        message_id = publisher.send(
+        message_id = producer.send(
             topic="test-topic",
             message=b"Binary message",
             message_id="custom-msg-id",
@@ -136,7 +136,7 @@ class TestKafkaPublisher:
             on_delivery=custom_settings.on_delivery,
         )
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_send_with_producer_exception(self, mock_producer, basic_settings):
         """Test handling of producer exceptions during send."""
         mock_producer_instance = Mock()
@@ -146,19 +146,19 @@ class TestKafkaPublisher:
         test_exception = Exception("Producer error")
         mock_producer_instance.produce.side_effect = test_exception
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Verify the exception is re-raised
         with pytest.raises(Exception, match="Producer error"):
-            publisher.send(topic="test-topic", message="test message")
+            producer.send(topic="test-topic", message="test message")
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_send_various_message_types(self, mock_producer, basic_settings):
         """Test sending different message types."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         test_cases = [
             ("string message", "string message"),
@@ -169,61 +169,61 @@ class TestKafkaPublisher:
         for i, (message, expected) in enumerate(test_cases):
             mock_producer_instance.produce.reset_mock()
 
-            with patch.object(publisher, "_generate_message_id", return_value=f"msg-{i}"):
-                publisher.send(topic="test-topic", message=message)
+            with patch.object(producer, "_generate_message_id", return_value=f"msg-{i}"):
+                producer.send(topic="test-topic", message=message)
 
             call_args = mock_producer_instance.produce.call_args
             assert call_args[1]["value"] == expected
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_flush_success(self, mock_producer, basic_settings):
         """Test successful flush operation."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
         mock_producer_instance.flush.return_value = 0  # No remaining messages
 
-        publisher = KafkaPublisher(basic_settings)
-        publisher.flush(timeout=5.0)
+        producer = KafkaProducer(basic_settings)
+        producer.flush(timeout=5.0)
 
         mock_producer_instance.flush.assert_called_once_with(5.0)
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_flush_with_remaining_messages(self, mock_producer, basic_settings):
         """Test flush with some messages remaining."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
         mock_producer_instance.flush.return_value = 3  # 3 remaining messages
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
-        with patch("cezzis_kafka.kafka_publisher.logger") as mock_logger:
-            publisher.flush(timeout=2.0)
+        with patch("cezzis_kafka.kafka_producer.logger") as mock_logger:
+            producer.flush(timeout=2.0)
 
         mock_producer_instance.flush.assert_called_once_with(2.0)
         mock_logger.warning.assert_called_once_with("Failed to deliver 3 messages within timeout")
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_close(self, mock_producer, basic_settings):
         """Test close operation."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
         mock_producer_instance.flush.return_value = 0
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
-        with patch("cezzis_kafka.kafka_publisher.logger") as mock_logger:
-            publisher.close()
+        with patch("cezzis_kafka.kafka_producer.logger") as mock_logger:
+            producer.close()
 
         # Should flush first, then log success
         mock_producer_instance.flush.assert_called_once_with(10.0)  # Default timeout
-        mock_logger.info.assert_called_with("Kafka publisher closed successfully")
+        mock_logger.info.assert_called_with("Kafka producer closed successfully")
 
     def test_generate_message_id(self, basic_settings):
         """Test message ID generation."""
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Test message ID format
-        message_id = publisher._generate_message_id("test-topic")
+        message_id = producer._generate_message_id("test-topic")
 
         # Should be in format: topic_timestamp_randomhex
         parts = message_id.split("_")
@@ -235,45 +235,45 @@ class TestKafkaPublisher:
 
     def test_generate_message_id_uniqueness(self, basic_settings):
         """Test that generated message IDs are unique."""
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Generate multiple IDs
-        ids = [publisher._generate_message_id("test-topic") for _ in range(100)]
+        ids = [producer._generate_message_id("test-topic") for _ in range(100)]
 
         # All should be unique
         assert len(set(ids)) == 100
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_broker_url_property(self, mock_producer, basic_settings):
         """Test broker_url property."""
-        publisher = KafkaPublisher(basic_settings)
-        assert publisher.broker_url == basic_settings.bootstrap_servers
+        producer = KafkaProducer(basic_settings)
+        assert producer.broker_url == basic_settings.bootstrap_servers
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_settings_stored(self, mock_producer, basic_settings):
         """Test that settings are properly stored."""
-        publisher = KafkaPublisher(basic_settings)
-        assert publisher.settings is basic_settings
+        producer = KafkaProducer(basic_settings)
+        assert producer.settings is basic_settings
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_send_headers_handling(self, mock_producer, basic_settings):
         """Test proper headers handling in send method."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Test with no headers
-        with patch.object(publisher, "_generate_message_id", return_value="msg-1"):
-            publisher.send(topic="test-topic", message="test")
+        with patch.object(producer, "_generate_message_id", return_value="msg-1"):
+            producer.send(topic="test-topic", message="test")
 
         call_args = mock_producer_instance.produce.call_args
         assert call_args[1]["headers"] == {"message_id": "msg-1"}
 
         # Test with existing headers
         mock_producer_instance.produce.reset_mock()
-        with patch.object(publisher, "_generate_message_id", return_value="msg-2"):
-            publisher.send(
+        with patch.object(producer, "_generate_message_id", return_value="msg-2"):
+            producer.send(
                 topic="test-topic", message="test", headers={"existing": "header", "message_id": "should-be-overridden"}
             )
 
@@ -281,19 +281,19 @@ class TestKafkaPublisher:
         expected_headers = {"existing": "header", "message_id": "msg-2"}
         assert call_args[1]["headers"] == expected_headers
 
-    @patch("cezzis_kafka.kafka_publisher.Producer")
+    @patch("cezzis_kafka.kafka_producer.Producer")
     def test_concurrent_sends(self, mock_producer, basic_settings):
         """Test multiple concurrent send operations."""
         mock_producer_instance = Mock()
         mock_producer.return_value = mock_producer_instance
 
-        publisher = KafkaPublisher(basic_settings)
+        producer = KafkaProducer(basic_settings)
 
         # Send multiple messages
         message_ids = []
         for i in range(10):
-            with patch.object(publisher, "_generate_message_id", return_value=f"msg-{i}"):
-                msg_id = publisher.send(topic=f"topic-{i}", message=f"message-{i}", key=f"key-{i}")
+            with patch.object(producer, "_generate_message_id", return_value=f"msg-{i}"):
+                msg_id = producer.send(topic=f"topic-{i}", message=f"message-{i}", key=f"key-{i}")
                 message_ids.append(msg_id)
 
         # Verify all were sent
@@ -309,13 +309,13 @@ class TestKafkaPublisher:
             assert call[1]["headers"]["message_id"] == f"msg-{i}"
 
 
-class TestKafkaPublisherErrorHandling:
-    """Test error handling scenarios for KafkaPublisher."""
+class TestKafkaProducerErrorHandling:
+    """Test error handling scenarios for KafkaProducer."""
 
     def test_producer_creation_failure(self):
         """Test handling of Producer creation failure."""
-        settings = KafkaPublisherSettings(bootstrap_servers="invalid:9092")
+        settings = KafkaProducerSettings(bootstrap_servers="invalid:9092")
 
-        with patch("cezzis_kafka.kafka_publisher.Producer", side_effect=Exception("Connection failed")):
+        with patch("cezzis_kafka.kafka_producer.Producer", side_effect=Exception("Connection failed")):
             with pytest.raises(Exception, match="Connection failed"):
-                KafkaPublisher(settings)
+                KafkaProducer(settings)

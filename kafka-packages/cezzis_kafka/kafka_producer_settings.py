@@ -3,8 +3,8 @@ from typing import Any, Callable, Dict, Optional
 from confluent_kafka import KafkaError, Message
 
 
-class KafkaPublisherSettings:
-    """Settings for Kafka Publisher.
+class KafkaProducerSettings:
+    """Settings for Kafka Producer.
 
     Attributes:
         bootstrap_servers (str): Kafka bootstrap servers.
@@ -13,6 +13,7 @@ class KafkaPublisherSettings:
         retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries.
         delivery_timeout_ms (int): Total timeout for message delivery including retries.
         request_timeout_ms (int): Timeout for individual produce requests.
+        on_delivery (Optional[Callable[[KafkaError | None, Message], None]]): Callback for delivery reports.
         producer_config (Optional[Dict[str, Any]]): Additional producer configuration.
 
     Methods:
@@ -38,6 +39,7 @@ class KafkaPublisherSettings:
             retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries. Defaults to 1000.
             delivery_timeout_ms (int): Total timeout for message delivery including retries. Defaults to 300000 (5 minutes).
             request_timeout_ms (int): Timeout for individual produce requests. Defaults to 30000 (30 seconds).
+            on_delivery (Optional[Callable[[KafkaError | None, Message], None]]): Callback for delivery reports.
             producer_config (Optional[Dict[str, Any]]): Additional producer configuration to override defaults.
 
         Raises:
