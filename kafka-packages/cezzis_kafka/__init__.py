@@ -3,6 +3,8 @@
 from cezzis_kafka.ikafka_message_processor import IKafkaMessageProcessor
 from cezzis_kafka.kafka_consumer import spawn_consumers, start_consumer
 from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
+from cezzis_kafka.kafka_producer import KafkaProducer
+from cezzis_kafka.kafka_producer_settings import KafkaProducerSettings
 
 # Dynamically read version from package metadata
 try:
@@ -17,4 +19,6 @@ __all__ = [
     "KafkaConsumerSettings",
     "start_consumer",
     "spawn_consumers",
+    "KafkaProducerSettings",
+    "KafkaProducer",
 ]

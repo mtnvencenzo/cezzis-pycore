@@ -1,0 +1,134 @@
+"""
+Tests for KafkaProducerSettings class.
+"""
+
+import pytest
+
+from cezzis_kafka.kafka_producer_settings import KafkaProducerSettings
+
+
+class TestKafkaProducerSettings:
+    """Test suite for KafkaProducerSettings class."""
+
+    def test_init_with_required_parameters(self):
+        """Test initialization with only required parameters."""
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092")
+
+        assert settings.bootstrap_servers == "localhost:9092"
+        assert settings.max_retries == 3  # Default value
+        assert settings.retry_backoff_ms == 100  # Default value
+        assert settings.retry_backoff_max_ms == 1000  # Default value
+        assert settings.delivery_timeout_ms == 300000  # Default value
+        assert settings.request_timeout_ms == 30000  # Default value
+        assert settings.on_delivery is None
+        assert settings.producer_config == {}
+
+    def test_init_with_all_parameters(self):
+        """Test initialization with all parameters."""
+
+        def mock_delivery_callback(error, message):
+            pass
+
+        producer_config = {"batch.size": 16384, "linger.ms": 10}
+
+        settings = KafkaProducerSettings(
+            bootstrap_servers="kafka1:9092,kafka2:9092",
+            max_retries=5,
+            retry_backoff_ms=200,
+            retry_backoff_max_ms=2000,
+            delivery_timeout_ms=600000,
+            request_timeout_ms=60000,
+            on_delivery=mock_delivery_callback,
+            producer_config=producer_config,
+        )
+
+        assert settings.bootstrap_servers == "kafka1:9092,kafka2:9092"
+        assert settings.max_retries == 5
+        assert settings.retry_backoff_ms == 200
+        assert settings.retry_backoff_max_ms == 2000
+        assert settings.delivery_timeout_ms == 600000
+        assert settings.request_timeout_ms == 60000
+        assert settings.on_delivery == mock_delivery_callback
+        assert settings.producer_config == producer_config
+
+    def test_init_with_custom_max_retries(self):
+        """Test initialization with custom max_retries."""
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=1)
+
+        assert settings.max_retries == 1
+
+    def test_init_with_none_producer_config(self):
+        """Test initialization with None producer_config defaults to empty dict."""
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", producer_config=None)
+
+        assert settings.producer_config == {}
+
+    def test_empty_bootstrap_servers_raises_error(self):
+        """Test that empty bootstrap servers raise ValueError."""
+        with pytest.raises(ValueError, match="Bootstrap servers cannot be empty"):
+            KafkaProducerSettings(bootstrap_servers="")
+
+    def test_whitespace_only_bootstrap_servers_raises_error(self):
+        """Test that whitespace-only bootstrap servers raise ValueError."""
+        with pytest.raises(ValueError, match="Bootstrap servers cannot be empty"):
+            KafkaProducerSettings(bootstrap_servers="   ")
+
+    def test_negative_max_retries_raises_error(self):
+        """Test that negative max_retries raises ValueError."""
+        with pytest.raises(
+            ValueError, match="Max retries must be at least 1 to support idempotent producer configuration"
+        ):
+            KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=-1)
+
+    def test_zero_max_retries_raises_error(self):
+        """Test that max_retries=0 raises ValueError due to idempotent producer requirement."""
+        with pytest.raises(
+            ValueError, match="Max retries must be at least 1 to support idempotent producer configuration"
+        ):
+            KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=0)
+
+    def test_producer_config_is_copied(self):
+        """Test that producer_config is properly handled as a copy."""
+        original_config = {"batch.size": 1024}
+
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", producer_config=original_config)
+
+        # Modify original config
+        original_config["linger.ms"] = 5
+
+        # Settings should not be affected
+        assert "linger.ms" not in settings.producer_config
+        assert settings.producer_config == {"batch.size": 1024}
+
+    @pytest.mark.parametrize(
+        "servers",
+        [
+            "localhost:9092",
+            "kafka1:9092,kafka2:9092,kafka3:9092",
+            "192.168.1.100:9092",
+            "my-kafka-cluster.example.com:9092",
+        ],
+    )
+    def test_valid_bootstrap_servers(self, servers):
+        """Test various valid bootstrap server formats."""
+        settings = KafkaProducerSettings(bootstrap_servers=servers)
+        assert settings.bootstrap_servers == servers
+
+    @pytest.mark.parametrize("retries", [1, 3, 5, 10, 100])
+    def test_valid_max_retries(self, retries):
+        """Test various valid max_retries values."""
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=retries)
+        assert settings.max_retries == retries
+
+    def test_settings_immutability_concept(self):
+        """Test that settings can be used to create different configurations."""
+        base_config = {"bootstrap_servers": "localhost:9092", "max_retries": 2}
+
+        # Development settings
+        dev_settings = KafkaProducerSettings(**base_config)
+
+        # Production settings with DLQ
+        prod_settings = KafkaProducerSettings(**base_config, producer_config={"acks": "all", "retries": 5})
+
+        assert dev_settings.producer_config == {}
+        assert prod_settings.producer_config == {"acks": "all", "retries": 5}

@@ -63,8 +63,10 @@ jobs:
     name: Publish to github packages
     needs: [build, gitVersion]
     uses: mtnvencenzo/workflows/.github/workflows/py-package-publish.yaml@main
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
     with:
       python_version: '3.12'
+      environment_name: 'prd'
       working_directory: './otel-packages'
       artifact_name: 'cezzis-otel-dist'
       repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload

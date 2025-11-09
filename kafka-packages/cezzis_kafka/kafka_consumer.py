@@ -19,8 +19,6 @@ def start_consumer(stop_event: EventType, processor: IKafkaMessageProcessor) -> 
         stop_event (EventType): An event to signal when to stop the consumer.
         processor (IKafkaMessageProcessor): An instance of IKafkaMessageProcessor to handle message processing.
     """
-    global logger
-
     consumer = _create_consumer(processor)
 
     if consumer is None:
