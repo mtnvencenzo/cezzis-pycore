@@ -164,7 +164,7 @@ def test_max_retries_exceeded():
 
     retriable_error = KafkaError(KafkaError.NETWORK_EXCEPTION, "Network error")
 
-    print("\\nTesting max retries exceeded behavior...")
+    print("\nTesting max retries exceeded behavior...")
 
     # First failure - should retry (attempt_count goes from 0 to 1)
     handler.handle_delivery(retriable_error, mock_message)
@@ -192,4 +192,4 @@ if __name__ == "__main__":
     test_retry_scheduling()
     test_terminal_failure_dlq()
     test_max_retries_exceeded()
-    print("\\n🎉 All retry mechanism tests passed!")
+    print("\n🎉 All retry mechanism tests passed!")

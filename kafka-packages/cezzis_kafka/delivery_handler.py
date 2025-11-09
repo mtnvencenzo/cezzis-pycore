@@ -98,11 +98,18 @@ class DeliveryHandler:
         Returns:
             None
         """
-        context = DeliveryContext(message_id=message_id, topic=topic, metadata=metadata or {})
+        # Create a shallow copy of metadata to avoid mutating caller's data
+        sanitized_metadata = (metadata or {}).copy()
+        
+        context = DeliveryContext(
+            message_id=message_id, 
+            topic=topic, 
+            metadata=sanitized_metadata
+        )
 
-        # Store original message data for retry attempts
+        # Store original message data separately for retry attempts (not in metadata)
         if original_message_data:
-            context.metadata["_original_message"] = original_message_data
+            context.original_message_snapshot = original_message_data.copy()
 
         self._pending_messages[message_id] = context
 
@@ -375,8 +382,8 @@ class DeliveryHandler:
             return
 
         try:
-            # Extract original message data from context
-            original_data = context.metadata.get("_original_message", {})
+            # Extract original message data from the snapshot (not from metadata)
+            original_data = context.original_message_snapshot or {}
             topic = original_msg.topic()
 
             if not topic:
@@ -626,8 +633,9 @@ class DeliveryHandler:
         logger.info("Shutting down delivery handler")
         self._shutdown = True
 
-        # Cancel all pending retry timers
-        for message_id, timer in self._retry_timers.items():
+        # Cancel all pending retry timers - use snapshot to avoid RuntimeError from concurrent modification
+        retry_timers_snapshot = list(self._retry_timers.items())
+        for message_id, timer in retry_timers_snapshot:
             try:
                 timer.cancel()
                 logger.debug(f"Cancelled retry timer for message {message_id}")

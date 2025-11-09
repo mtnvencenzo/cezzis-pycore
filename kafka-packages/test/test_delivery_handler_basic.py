@@ -114,8 +114,9 @@ class TestMessageTracking:
         handler.track_message("msg-1", "test-topic", {}, original_data)
 
         context = handler._pending_messages["msg-1"]
-        assert "_original_message" in context.metadata
-        assert context.metadata["_original_message"] == original_data
+        # Original message data should be stored in the snapshot, not metadata
+        assert context.original_message_snapshot == original_data
+        assert "_original_message" not in context.metadata  # Should not leak into metadata
 
     def test_remove_pending_message(self):
         """Test removing pending messages."""
