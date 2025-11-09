@@ -297,7 +297,6 @@ import json
 settings = KafkaPublisherSettings(
     bootstrap_servers="localhost:9092",
     max_retries=3,
-    dlq_topic="orders-dlq",
     producer_config={
         # Kafka producer optimizations
         "acks": "all",                    # Wait for all replicas
@@ -441,7 +440,6 @@ Configuration class for Kafka publishers.
 KafkaPublisherSettings(
     bootstrap_servers: str,
     max_retries: int = 3,
-    dlq_topic: Optional[str] = None,
     metrics_callback: Optional[Callable] = None,
     producer_config: Optional[Dict[str, Any]] = None
 )
@@ -450,7 +448,6 @@ KafkaPublisherSettings(
 **Parameters:**
 - `bootstrap_servers` (str): Comma-separated list of Kafka broker addresses
 - `max_retries` (int, default=3): Maximum number of retries for retriable errors
-- `dlq_topic` (Optional[str]): Dead letter queue topic name for terminal failures
 - `metrics_callback` (Optional[Callable]): Callback function for reporting metrics
 - `producer_config` (Optional[Dict]): Additional Kafka producer configuration to override defaults
 
@@ -478,7 +475,6 @@ Base class for handling message delivery callbacks with retry and DLQ functional
 DeliveryHandler(
     max_retries: int = 3,
     retry_backoff_ms: int = 1000,
-    dlq_topic: Optional[str] = None,
     metrics_callback: Optional[Callable] = None,
     bootstrap_servers: Optional[str] = None,
     retry_producer: Optional[Producer] = None
@@ -490,7 +486,6 @@ DeliveryHandler(
 - `on_delivery_success(context: DeliveryContext) -> None`: Called on successful delivery
 - `on_delivery_failure(context: DeliveryContext, error: Exception) -> None`: Called on delivery failure (triggers retry logic)
 - `on_retry_scheduled(context: DeliveryContext, delay: float, attempt: int) -> None`: Called when retry is scheduled
-- `on_dlq_sent(context: DeliveryContext, error: Exception) -> None`: Called when message is sent to DLQ
 - `shutdown() -> None`: Cleanup method for graceful shutdown
 
 **Built-in Error Classification:**
@@ -520,7 +515,6 @@ Enumeration of message delivery states.
 - `SUCCESS`: Message delivered successfully
 - `FAILED`: Message delivery failed
 - `RETRY_SCHEDULED`: Retry scheduled for failed message
-- `DLQ_SENT`: Message sent to dead letter queue
 
 ## 🏢 Enterprise Features
 
@@ -595,7 +589,6 @@ settings = KafkaPublisherSettings(
 settings = KafkaPublisherSettings(
     bootstrap_servers="localhost:9092",
     max_retries=10,                    # More application-level retries
-    dlq_topic="critical-dlq",          # Capture all failures
     producer_config={
         "acks": "all",                 # Wait for all replicas
         "retries": 10,                 # More Kafka-level retries

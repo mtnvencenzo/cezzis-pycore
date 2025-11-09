@@ -49,20 +49,6 @@ class TestShutdownAndCleanup:
         # Producer should not have been called for retries after close
         assert mock_producer.produce.call_count == 0
 
-    def test_close_shuts_down_dlq_producer(self):
-        """Test that close() properly shuts down DLQ producer."""
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.return_value = 0
-
-        handler = DeliveryHandler(dlq_topic="test-dlq")
-        handler._dlq_producer = mock_dlq_producer
-
-        # Close handler
-        handler.close()
-
-        # DLQ producer should be flushed and set to None
-        mock_dlq_producer.flush.assert_called_once_with(timeout=30.0)
-        assert handler._dlq_producer is None
 
     def test_close_clears_pending_messages(self):
         """Test that close() clears all pending messages."""
@@ -157,56 +143,21 @@ class TestShutdownAndCleanup:
         # Timer should still be removed from dict
         assert "error-timer" not in handler._retry_timers
 
-    def test_close_handles_dlq_producer_flush_errors(self):
-        """Test that close() handles DLQ producer flush errors gracefully."""
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.side_effect = Exception("Flush error")
-
-        handler = DeliveryHandler(dlq_topic="test-dlq")
-        handler._dlq_producer = mock_dlq_producer
-
-        # Should not raise exception
-        handler.close()
-
-        # DLQ producer should still be set to None
-        assert handler._dlq_producer is None
-
-    def test_close_handles_dlq_producer_flush_timeout(self):
-        """Test handling of DLQ producer flush with remaining messages."""
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.return_value = 5  # 5 messages remaining
-
-        handler = DeliveryHandler(dlq_topic="test-dlq")
-        handler._dlq_producer = mock_dlq_producer
-
-        # Should not raise exception, but log warning
-        handler.close()
-
-        mock_dlq_producer.flush.assert_called_once_with(timeout=30.0)
-        assert handler._dlq_producer is None
-
     def test_multiple_close_calls_are_safe(self):
         """Test that multiple calls to close() are safe."""
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.return_value = 0
 
-        handler = DeliveryHandler(dlq_topic="test-dlq")
-        handler._dlq_producer = mock_dlq_producer
-
+        handler = DeliveryHandler()
+  
         # Track some data
         handler.track_message("multi-close", "test-topic")
 
         # First close
         handler.close()
         assert handler._shutdown is True
-        assert handler._dlq_producer is None
         assert len(handler._pending_messages) == 0
 
         # Second close should be safe
         handler.close()
-
-        # Should only call flush once
-        mock_dlq_producer.flush.assert_called_once()
 
 
 class TestResourceManagement:
@@ -214,11 +165,8 @@ class TestResourceManagement:
 
     def test_context_manager_pattern(self):
         """Test that handler can be used as context manager (conceptually)."""
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.return_value = 0
 
-        handler = DeliveryHandler(dlq_topic="test-dlq")
-        handler._dlq_producer = mock_dlq_producer
+        handler = DeliveryHandler()
 
         # Track some messages
         handler.track_message("ctx-1", "test-topic")
@@ -227,14 +175,12 @@ class TestResourceManagement:
         try:
             # Do some work with handler
             assert len(handler._pending_messages) == 2
-            assert handler._dlq_producer is not None
         finally:
             # Always clean up
             handler.close()
 
         # Resources should be cleaned up
         assert handler._shutdown is True
-        assert handler._dlq_producer is None
         assert len(handler._pending_messages) == 0
 
     def test_retry_timer_cleanup_with_concurrent_access(self):

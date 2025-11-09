@@ -7,7 +7,6 @@ class KafkaPublisherSettings:
     Attributes:
         bootstrap_servers (str): Kafka bootstrap servers.
         max_retries (int): Maximum number of retries for retriable errors.
-        dlq_topic (Optional[str]): Dead Letter Queue topic name for terminal failures.
         metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
         producer_config (Optional[Dict[str, Any]]): Additional producer configuration.
 
@@ -18,7 +17,6 @@ class KafkaPublisherSettings:
         self,
         bootstrap_servers: str,
         max_retries: int = 3,
-        dlq_topic: Optional[str] = None,
         metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
         producer_config: Optional[Dict[str, Any]] = None,
     ) -> None:
@@ -27,7 +25,6 @@ class KafkaPublisherSettings:
         Args:
             bootstrap_servers (str): Kafka bootstrap servers.
             max_retries (int): Maximum number of retries for retriable errors. Defaults to 3.
-            dlq_topic (Optional[str]): Dead Letter Queue topic name for terminal failures.
             metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
             producer_config (Optional[Dict[str, Any]]): Additional producer configuration to override defaults.
 
@@ -43,6 +40,5 @@ class KafkaPublisherSettings:
 
         self.bootstrap_servers = bootstrap_servers
         self.max_retries = max_retries
-        self.dlq_topic = dlq_topic
         self.metrics_callback = metrics_callback
         self.producer_config = (producer_config or {}).copy()  # Make a copy to avoid mutation

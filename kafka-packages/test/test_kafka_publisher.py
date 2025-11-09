@@ -37,7 +37,6 @@ class TestKafkaPublisher:
         return KafkaPublisherSettings(
             bootstrap_servers="kafka1:9092,kafka2:9092",
             max_retries=2,
-            dlq_topic="test-dlq",
             producer_config={"batch.size": 16384, "linger.ms": 10},
         )
 
@@ -59,7 +58,6 @@ class TestKafkaPublisher:
         # Verify DeliveryHandler was created with correct parameters
         mock_delivery_handler.assert_called_once_with(
             max_retries=3,
-            dlq_topic=None,
             metrics_callback=None,
             bootstrap_servers="localhost:9092",
             retry_producer=mock_producer.return_value,
@@ -72,7 +70,6 @@ class TestKafkaPublisher:
         custom_settings = KafkaPublisherSettings(
             bootstrap_servers="kafka1:9092,kafka2:9092",
             max_retries=2,
-            dlq_topic="test-dlq",
             metrics_callback=metrics_callback,
             producer_config={"batch.size": 16384, "linger.ms": 10},
         )
@@ -95,7 +92,6 @@ class TestKafkaPublisher:
         # Verify DeliveryHandler parameters
         mock_delivery_handler.assert_called_once_with(
             max_retries=2,
-            dlq_topic="test-dlq",
             metrics_callback=metrics_callback,
             bootstrap_servers="kafka1:9092,kafka2:9092",
             retry_producer=mock_producer.return_value,
@@ -308,7 +304,7 @@ class TestKafkaPublisher:
         mock_producer = mocker.patch("cezzis_kafka.kafka_publisher.Producer")
         mock_producer_instance = mock_producer.return_value
 
-        settings = KafkaPublisherSettings(bootstrap_servers="localhost:9092", max_retries=2, dlq_topic="test-dlq")
+        settings = KafkaPublisherSettings(bootstrap_servers="localhost:9092", max_retries=2)
 
         publisher = KafkaPublisher(settings)
 

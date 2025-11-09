@@ -5,11 +5,10 @@ Tests for basic DeliveryHandler functionality.
 import unittest.mock as mock
 
 import pytest
-from confluent_kafka import KafkaError, Message
+from confluent_kafka import KafkaError
 
 from cezzis_kafka.delivery_context import DeliveryContext
 from cezzis_kafka.delivery_handler import DeliveryHandler
-from cezzis_kafka.delivery_status import DeliveryStatus
 
 
 class TestDeliveryHandlerInit:
@@ -21,13 +20,11 @@ class TestDeliveryHandlerInit:
 
         assert handler.max_retries == 3
         assert handler.retry_backoff_ms == 1000
-        assert handler.dlq_topic is None
         assert handler.metrics_callback is None
         assert handler._pending_messages == {}
         assert handler._retry_producer is None
         assert handler._retry_timers == {}
         assert handler._shutdown is False
-        assert handler._dlq_producer is None
 
     def test_init_with_custom_values(self):
         """Test initialization with custom values."""
@@ -37,46 +34,15 @@ class TestDeliveryHandlerInit:
         handler = DeliveryHandler(
             max_retries=5,
             retry_backoff_ms=2000,
-            dlq_topic="test-dlq",
             metrics_callback=metrics_callback,
             retry_producer=retry_producer,
         )
 
         assert handler.max_retries == 5
         assert handler.retry_backoff_ms == 2000
-        assert handler.dlq_topic == "test-dlq"
         assert handler.metrics_callback == metrics_callback
         assert handler._retry_producer == retry_producer
         assert handler._shutdown is False
-
-    @mock.patch("cezzis_kafka.delivery_handler.Producer")
-    def test_init_with_dlq_producer(self, mock_producer_class):
-        """Test initialization with DLQ producer creation."""
-        mock_producer = mock.Mock()
-        mock_producer_class.return_value = mock_producer
-
-        handler = DeliveryHandler(dlq_topic="test-dlq", bootstrap_servers="localhost:9092")
-
-        # Should create DLQ producer
-        assert handler._dlq_producer == mock_producer
-        mock_producer_class.assert_called_once()
-
-        # Verify producer config
-        producer_config = mock_producer_class.call_args[0][0]
-        assert producer_config["bootstrap.servers"] == "localhost:9092"
-        assert producer_config["acks"] == "all"
-        assert producer_config["retries"] == 5
-
-    @mock.patch("cezzis_kafka.delivery_handler.Producer")
-    def test_init_dlq_producer_failure(self, mock_producer_class):
-        """Test graceful handling of DLQ producer creation failure."""
-        mock_producer_class.side_effect = Exception("Connection failed")
-
-        # Should not raise exception
-        handler = DeliveryHandler(dlq_topic="test-dlq", bootstrap_servers="localhost:9092")
-
-        # DLQ producer should be None
-        assert handler._dlq_producer is None
 
 
 class TestMessageTracking:
@@ -384,45 +350,6 @@ class TestUtilityMethods:
 
         # Should not raise exception and return some string
         assert isinstance(result, str)
-
-    def test_serialize_for_dlq_bytes(self):
-        """Test DLQ serialization of bytes."""
-        handler = DeliveryHandler()
-
-        result = handler._serialize_for_dlq(b"test bytes")
-        assert result == "test bytes"
-
-    def test_serialize_for_dlq_dict(self):
-        """Test DLQ serialization of dict with mixed types."""
-        handler = DeliveryHandler()
-
-        input_dict = {"string_key": "value", "bytes_key": b"bytes_value", "int_key": 123}
-
-        result = handler._serialize_for_dlq(input_dict)
-
-        expected = {"string_key": "value", "bytes_key": "bytes_value", "int_key": 123}
-        assert result == expected
-
-    def test_serialize_for_dlq_list(self):
-        """Test DLQ serialization of list with mixed types."""
-        handler = DeliveryHandler()
-
-        input_list = ["string", b"bytes", 123, {"nested": b"value"}]
-        result = handler._serialize_for_dlq(input_list)
-
-        expected = ["string", "bytes", 123, {"nested": "value"}]
-        assert result == expected
-
-    def test_serialize_for_dlq_nested(self):
-        """Test DLQ serialization of nested structures."""
-        handler = DeliveryHandler()
-
-        complex_obj = {"level1": {"level2": [b"bytes_in_list", {"level3": b"deep_bytes"}]}}
-
-        result = handler._serialize_for_dlq(complex_obj)
-
-        expected = {"level1": {"level2": ["bytes_in_list", {"level3": "deep_bytes"}]}}
-        assert result == expected
 
 
 if __name__ == "__main__":

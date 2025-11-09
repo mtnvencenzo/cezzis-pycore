@@ -38,7 +38,6 @@ class KafkaPublisher:
         self._producer = Producer(config)
         self._delivery_handler = DeliveryHandler(
             max_retries=settings.max_retries,
-            dlq_topic=settings.dlq_topic,
             metrics_callback=settings.metrics_callback,
             bootstrap_servers=settings.bootstrap_servers,
             retry_producer=self._producer,  # Pass producer for retries

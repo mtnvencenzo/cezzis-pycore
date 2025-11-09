@@ -79,14 +79,7 @@ def test_retry_scheduling():
 def test_terminal_failure_dlq():
     """Test that terminal failures go to DLQ without retry."""
 
-    mock_dlq_producer = mock.Mock()
-    # Fix the flush method to return a reasonable value
-    mock_dlq_producer.flush.return_value = 0
-
-    handler = DeliveryHandler(max_retries=2, dlq_topic="test-dlq", bootstrap_servers="localhost:9092")
-
-    # Mock the DLQ producer
-    handler._dlq_producer = mock_dlq_producer
+    handler = DeliveryHandler(max_retries=2, bootstrap_servers="localhost:9092")
 
     # Create mock message
     mock_message = mock.Mock()
@@ -111,38 +104,19 @@ def test_terminal_failure_dlq():
     assert "test-msg-2" not in handler._retry_timers
     print("✓ No retry scheduled for fatal error")
 
-    # Should send to DLQ
-    assert mock_dlq_producer.produce.called
-    print("✓ Message sent to DLQ")
-
-    # Verify DLQ payload contains error info
-    call_args = mock_dlq_producer.produce.call_args
-    dlq_key = call_args[1]["key"]
-    dlq_headers = call_args[1]["headers"]
-
-    assert dlq_key == "test-msg-2"
-    assert "dlq.failure_code" in dlq_headers
-    print("✓ DLQ message formatted correctly")
-
     handler.close()
-    print("✓ DLQ test completed successfully")
 
 
 def test_max_retries_exceeded():
     """Test that messages go to DLQ after max retries."""
 
     mock_producer = mock.Mock()
-    mock_dlq_producer = mock.Mock()
-    mock_dlq_producer.flush.return_value = 0
 
     handler = DeliveryHandler(
         max_retries=1,  # Only one retry
         retry_backoff_ms=50,
-        dlq_topic="test-dlq",
         retry_producer=mock_producer,
     )
-
-    handler._dlq_producer = mock_dlq_producer
 
     mock_message = mock.Mock()
     mock_message.topic.return_value = "test-topic"
@@ -179,10 +153,6 @@ def test_max_retries_exceeded():
 
     # Second failure after retry - should go to DLQ
     handler.handle_delivery(retriable_error, mock_message)
-
-    # Should send to DLQ (no more retries)
-    assert mock_dlq_producer.produce.called
-    print("✓ Message sent to DLQ after max retries exceeded")
 
     handler.close()
     print("✓ Max retries test completed successfully")

@@ -243,15 +243,11 @@ class TestErrorClassificationIntegration:
     def test_max_retries_with_retriable_errors(self):
         """Test that retriable errors eventually become terminal after max retries."""
         mock_producer = mock.Mock()
-        mock_dlq_producer = mock.Mock()
-        mock_dlq_producer.flush.return_value = 0
 
         handler = DeliveryHandler(
             max_retries=1,  # Only one retry allowed
-            retry_producer=mock_producer,
-            dlq_topic="test-dlq",
+            retry_producer=mock_producer
         )
-        handler._dlq_producer = mock_dlq_producer
 
         # Track message
         original_data = {"key": b"test", "value": b"data", "headers": {}}
@@ -280,7 +276,6 @@ class TestErrorClassificationIntegration:
 
         # Should be terminal now (sent to DLQ)
         assert "msg-1" not in handler._pending_messages
-        assert mock_dlq_producer.produce.called
 
         handler.close()
 

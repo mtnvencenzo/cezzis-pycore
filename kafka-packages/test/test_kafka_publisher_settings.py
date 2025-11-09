@@ -16,7 +16,6 @@ class TestKafkaPublisherSettings:
 
         assert settings.bootstrap_servers == "localhost:9092"
         assert settings.max_retries == 3  # Default value
-        assert settings.dlq_topic is None
         assert settings.metrics_callback is None
         assert settings.producer_config == {}
 
@@ -31,14 +30,12 @@ class TestKafkaPublisherSettings:
         settings = KafkaPublisherSettings(
             bootstrap_servers="kafka1:9092,kafka2:9092",
             max_retries=5,
-            dlq_topic="my-dlq",
             metrics_callback=mock_metrics_callback,
             producer_config=producer_config,
         )
 
         assert settings.bootstrap_servers == "kafka1:9092,kafka2:9092"
         assert settings.max_retries == 5
-        assert settings.dlq_topic == "my-dlq"
         assert settings.metrics_callback == mock_metrics_callback
         assert settings.producer_config == producer_config
 
@@ -102,16 +99,6 @@ class TestKafkaPublisherSettings:
         settings = KafkaPublisherSettings(bootstrap_servers="localhost:9092", max_retries=retries)
         assert settings.max_retries == retries
 
-    def test_dlq_topic_types(self):
-        """Test different dlq_topic values."""
-        # None
-        settings1 = KafkaPublisherSettings(bootstrap_servers="localhost:9092", dlq_topic=None)
-        assert settings1.dlq_topic is None
-
-        # String
-        settings2 = KafkaPublisherSettings(bootstrap_servers="localhost:9092", dlq_topic="my-dlq-topic")
-        assert settings2.dlq_topic == "my-dlq-topic"
-
     def test_settings_immutability_concept(self):
         """Test that settings can be used to create different configurations."""
         base_config = {"bootstrap_servers": "localhost:9092", "max_retries": 2}
@@ -121,11 +108,9 @@ class TestKafkaPublisherSettings:
 
         # Production settings with DLQ
         prod_settings = KafkaPublisherSettings(
-            **base_config, dlq_topic="prod-dlq", producer_config={"acks": "all", "retries": 5}
+            **base_config, producer_config={"acks": "all", "retries": 5}
         )
 
-        assert dev_settings.dlq_topic is None
-        assert prod_settings.dlq_topic == "prod-dlq"
         assert dev_settings.producer_config == {}
         assert prod_settings.producer_config == {"acks": "all", "retries": 5}
 

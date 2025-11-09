@@ -103,8 +103,7 @@ import json
 # Configure producer with retry and DLQ
 settings = KafkaPublisherSettings(
     bootstrap_servers="localhost:9092",
-    max_retries=3,
-    dlq_topic="orders-dlq"
+    max_retries=3
 )
 
 publisher = KafkaPublisher(settings)

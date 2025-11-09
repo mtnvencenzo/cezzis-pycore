@@ -19,7 +19,6 @@ class DeliveryHandler:
         self,
         max_retries: int = 3,
         retry_backoff_ms: int = 1000,
-        dlq_topic: Optional[str] = None,
         metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
         bootstrap_servers: Optional[str] = None,
         retry_producer: Optional[Producer] = None,
@@ -29,7 +28,6 @@ class DeliveryHandler:
         Args:
             max_retries (int): Maximum number of retries for retriable errors.
             retry_backoff_ms (int): Backoff time in milliseconds between retries.
-            dlq_topic (Optional[str]): Dead Letter Queue topic name for terminal failures.
             metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
             bootstrap_servers (Optional[str]): Kafka bootstrap servers for DLQ producer.
             retry_producer (Optional[Producer]): Producer instance to use for retries.
@@ -41,44 +39,11 @@ class DeliveryHandler:
 
         self.max_retries = max_retries
         self.retry_backoff_ms = retry_backoff_ms
-        self.dlq_topic = dlq_topic
         self.metrics_callback = metrics_callback
         self._pending_messages: Dict[str, DeliveryContext] = {}
         self._retry_producer = retry_producer  # Producer for retry attempts
         self._retry_timers: Dict[str, threading.Timer] = {}  # Track active retry timers
         self._shutdown = False  # Flag to prevent new retries during shutdown
-
-        # Initialize DLQ producer if DLQ topic is configured
-        self._dlq_producer: Optional[Producer] = None
-        if dlq_topic and bootstrap_servers:
-            self._init_dlq_producer(bootstrap_servers)
-
-    def _init_dlq_producer(self, bootstrap_servers: str) -> None:
-        """Initialize the DLQ producer with optimized settings for reliability."""
-        dlq_config = {
-            "bootstrap.servers": bootstrap_servers,
-            "acks": "all",  # Ensure DLQ messages are reliably stored
-            "retries": 5,  # Retry DLQ sends (more than main producer)
-            "retry.backoff.ms": 1000,
-            "max.in.flight.requests.per.connection": 1,
-            "enable.idempotence": True,
-            "compression.type": "snappy",
-            "request.timeout.ms": 30000,  # Longer timeout for DLQ
-            "delivery.timeout.ms": 60000,  # Ensure DLQ delivery
-        }
-
-        try:
-            self._dlq_producer = Producer(dlq_config)
-            logger.info(
-                "DLQ producer initialized successfully",
-                extra={"dlq_topic": self.dlq_topic, "bootstrap_servers": bootstrap_servers},
-            )
-        except Exception as e:
-            logger.error(
-                "Failed to initialize DLQ producer", exc_info=True, extra={"dlq_topic": self.dlq_topic, "error": str(e)}
-            )
-            # Continue without DLQ producer - we'll log errors instead
-            self._dlq_producer = None
 
     def track_message(
         self,
@@ -462,14 +427,9 @@ class DeliveryHandler:
                 "topic": msg.topic(),
                 "attempt_count": context.attempt_count,
                 "status": status.value,
-                "error_code": err.code(),
-                "dlq_topic": self.dlq_topic,
+                "error_code": err.code()
             },
         )
-
-        # Send to Dead Letter Queue if configured
-        if self.dlq_topic:
-            self._send_to_dlq(context, msg, err)
 
         # Report terminal failure metrics
         if self.metrics_callback:
@@ -479,7 +439,6 @@ class DeliveryHandler:
                     "status": status.value,
                     "topic": msg.topic(),
                     "final_attempt_count": context.attempt_count,
-                    "sent_to_dlq": self.dlq_topic is not None,
                 },
             )
 
@@ -519,115 +478,6 @@ class DeliveryHandler:
         else:
             return obj
 
-    def _send_to_dlq(self, context: DeliveryContext, original_msg: Message, err: KafkaError) -> None:
-        """Send failed message to Dead Letter Queue with error context.
-
-        Args:
-            context (DeliveryContext): Context of the failed message.
-            original_msg (Message): The original Kafka message that failed.
-            err (KafkaError): The error that occurred during delivery.
-
-        Returns:
-            None
-        """
-        if not self._dlq_producer or not self.dlq_topic:
-            logger.warning(
-                "DLQ not configured or producer unavailable, logging failed message",
-                extra={
-                    "message_id": context.message_id,
-                    "original_topic": original_msg.topic(),
-                    "failure_reason": str(err),
-                },
-            )
-            return
-
-        # Create comprehensive DLQ payload
-        offset = original_msg.offset()
-        headers = original_msg.headers()
-        key = original_msg.key()
-
-        dlq_payload = {
-            "original_topic": original_msg.topic(),
-            "original_partition": original_msg.partition(),
-            "original_offset": offset if offset and offset >= 0 else None,
-            "message_id": context.message_id,
-            "failure_reason": str(err),
-            "error_code": err.code(),
-            "attempt_count": context.attempt_count,
-            "original_timestamp": context.original_timestamp,
-            "failure_timestamp": time.time(),
-            "original_headers": {
-                k: v.decode("utf-8", errors="replace") if isinstance(v, bytes) else str(v) for k, v in headers
-            }
-            if headers
-            else {},
-            "original_key": self._safe_decode_value(key),
-            "original_value": self._safe_decode_value(original_msg.value()),
-            "metadata": self._serialize_for_dlq(context.metadata),
-        }
-
-        try:
-            # Serialize payload to JSON
-            dlq_message = json.dumps(dlq_payload, ensure_ascii=False)
-
-            # Create DLQ headers with additional context
-            dlq_headers = {
-                "dlq.original_topic": original_msg.topic(),
-                "dlq.message_id": context.message_id,
-                "dlq.failure_code": str(err.code()),
-                "dlq.failure_reason": str(err),
-                "dlq.attempt_count": str(context.attempt_count),
-                "dlq.timestamp": str(int(time.time() * 1000)),
-            }
-
-            # Send to DLQ with synchronous delivery for reliability
-            self._dlq_producer.produce(
-                topic=self.dlq_topic,
-                key=context.message_id,  # Use message_id as key for partitioning
-                value=dlq_message,
-                headers=dlq_headers,
-                on_delivery=self._dlq_delivery_callback,
-            )
-
-            # Flush immediately to ensure DLQ message is sent
-            self._dlq_producer.flush(timeout=10.0)
-
-            logger.info(
-                "Message sent to DLQ successfully",
-                extra={
-                    "message_id": context.message_id,
-                    "original_topic": original_msg.topic(),
-                    "dlq_topic": self.dlq_topic,
-                    "attempt_count": context.attempt_count,
-                },
-            )
-
-        except Exception as dlq_err:
-            logger.error(
-                "Failed to send message to DLQ",
-                exc_info=True,
-                extra={
-                    "message_id": context.message_id,
-                    "original_topic": original_msg.topic(),
-                    "dlq_topic": self.dlq_topic,
-                    "dlq_error": str(dlq_err),
-                    "original_failure": str(err),
-                },
-            )
-
-    def _dlq_delivery_callback(self, err: Optional[KafkaError], msg: Message) -> None:
-        """Callback for DLQ message delivery."""
-        if err is not None:
-            logger.error(
-                "DLQ message delivery failed",
-                extra={"dlq_topic": msg.topic() if msg else self.dlq_topic, "error": str(err)},
-            )
-        else:
-            logger.debug(
-                "DLQ message delivered successfully",
-                extra={"dlq_topic": msg.topic(), "partition": msg.partition(), "offset": msg.offset()},
-            )
-
     def close(self) -> None:
         """Close the DLQ producer, cancel retry timers, and clean up resources."""
         logger.info("Shutting down delivery handler")
@@ -643,20 +493,6 @@ class DeliveryHandler:
                 logger.warning(f"Error cancelling retry timer for message {message_id}: {e}")
 
         self._retry_timers.clear()
-
-        # Close DLQ producer
-        if self._dlq_producer:
-            try:
-                # Flush any pending DLQ messages
-                remaining = self._dlq_producer.flush(timeout=30.0)
-                if remaining > 0:
-                    logger.warning(f"Failed to flush {remaining} DLQ messages on close")
-
-                logger.info("DLQ producer closed successfully")
-            except Exception as e:
-                logger.error(f"Error closing DLQ producer: {e}")
-            finally:
-                self._dlq_producer = None
 
         # Clear pending messages
         self._pending_messages.clear()
