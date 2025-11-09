@@ -166,32 +166,26 @@ class TestErrorClassification:
 class TestErrorClassificationIntegration:
     """Test error classification integration with delivery handling."""
 
-    def test_retriable_error_triggers_retry_attempt(self):
-        """Test that retriable errors trigger retry attempts."""
-        mock_producer = mock.Mock()
-        handler = DeliveryHandler(max_retries=2, retry_producer=mock_producer)
+    def test_retriable_error_final_failure(self):
+        """Test that retriable errors are handled as final failures (after Kafka retries)."""
+        handler = DeliveryHandler()
 
-        # Track message with original data
-        original_data = {"key": b"test", "value": b"data", "headers": {}}
-        handler.track_message("msg-1", "test-topic", {}, original_data)
+        # Track message
+        handler.track_message("msg-1", "test-topic")
 
         # Create mock message
         mock_message = mock.Mock()
         mock_message.headers.return_value = [("message_id", b"msg-1")]
         mock_message.topic.return_value = "test-topic"
 
-        # Network error should be retriable
+        # Network error - final failure after Kafka's built-in retries
         network_error = KafkaError(KafkaError.NETWORK_EXCEPTION, "Network timeout")
 
-        # Handle failed delivery
+        # Handle failed delivery (this represents final failure)
         handler.handle_delivery(network_error, mock_message)
 
-        # Should still track message (retry scheduled)
-        assert "msg-1" in handler._pending_messages
-        context = handler._pending_messages["msg-1"]
-        assert context.attempt_count == 1  # Should be incremented for retry
-
-        handler.close()
+        # Should clean up message (final failure)
+        assert "msg-1" not in handler._pending_messages
 
     def test_fatal_error_triggers_terminal_handling(self):
         """Test that fatal errors trigger terminal handling."""
@@ -227,89 +221,16 @@ class TestErrorClassificationIntegration:
         mock_message.headers.return_value = [("message_id", b"msg-1")]
         mock_message.topic.return_value = "test-topic"
 
-        # Test retriable error metrics
+        # Test retriable error metrics (final failure)
         retriable_error = KafkaError(KafkaError.BROKER_NOT_AVAILABLE, "Broker down")
         handler.handle_delivery(retriable_error, mock_message)
 
         # Should report failure metrics with retriable status
         metrics_callback.assert_called()
-        failure_call = metrics_callback.call_args_list[0]
+        failure_call = metrics_callback.call_args
         assert failure_call[0][0] == "kafka.message.failed"
         failure_metrics = failure_call[0][1]
         assert failure_metrics["status"] == "retriable_error"
-
-        handler.close()
-
-    def test_max_retries_with_retriable_errors(self):
-        """Test that retriable errors eventually become terminal after max retries."""
-        mock_producer = mock.Mock()
-
-        handler = DeliveryHandler(
-            max_retries=1,  # Only one retry allowed
-            retry_producer=mock_producer,
-        )
-
-        # Track message
-        original_data = {"key": b"test", "value": b"data", "headers": {}}
-        handler.track_message("msg-1", "test-topic", {}, original_data)
-
-        # Create mock message
-        mock_message = mock.Mock()
-        mock_message.headers.return_value = [("message_id", b"msg-1")]
-        mock_message.topic.return_value = "test-topic"
-        mock_message.partition.return_value = 0
-        mock_message.offset.return_value = 123
-        mock_message.key.return_value = b"test"
-        mock_message.value.return_value = b"data"
-
-        # First failure - should retry (retriable error)
-        retriable_error = KafkaError(KafkaError.NETWORK_EXCEPTION, "Network error")
-        handler.handle_delivery(retriable_error, mock_message)
-
-        # Should be retrying
-        assert "msg-1" in handler._pending_messages
-        context = handler._pending_messages["msg-1"]
-        assert context.attempt_count == 1
-
-        # Second failure after retry - should go terminal (max retries exceeded)
-        handler.handle_delivery(retriable_error, mock_message)
-
-        # Should be terminal now (sent to DLQ)
-        assert "msg-1" not in handler._pending_messages
-
-        handler.close()
-
-    def test_different_error_types_in_sequence(self):
-        """Test handling different error types for the same message."""
-        mock_producer = mock.Mock()
-        handler = DeliveryHandler(max_retries=3, retry_producer=mock_producer)
-
-        # Track message
-        original_data = {"key": b"test", "value": b"data", "headers": {}}
-        handler.track_message("msg-1", "test-topic", {}, original_data)
-
-        # Create mock message
-        mock_message = mock.Mock()
-        mock_message.headers.return_value = [("message_id", b"msg-1")]
-        mock_message.topic.return_value = "test-topic"
-
-        # First failure: retriable network error
-        network_error = KafkaError(KafkaError.NETWORK_EXCEPTION, "Network error")
-        handler.handle_delivery(network_error, mock_message)
-
-        # Should retry
-        assert "msg-1" in handler._pending_messages
-        context = handler._pending_messages["msg-1"]
-        assert context.attempt_count == 1
-
-        # Second failure: fatal authorization error (should override retry logic)
-        auth_error = KafkaError(KafkaError.TOPIC_AUTHORIZATION_FAILED, "Not authorized")
-        handler.handle_delivery(auth_error, mock_message)
-
-        # Should be terminal despite being under max retries
-        assert "msg-1" not in handler._pending_messages
-
-        handler.close()
 
 
 if __name__ == "__main__":

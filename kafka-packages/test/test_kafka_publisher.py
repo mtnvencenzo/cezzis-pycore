@@ -48,7 +48,11 @@ class TestKafkaPublisher:
         expected_config = {
             "bootstrap.servers": "localhost:9092",
             "acks": "all",
-            "retries": 0,
+            "retries": 3,  # Using max_retries from settings
+            "retry.backoff.ms": 100,
+            "retry.backoff.max.ms": 1000,
+            "delivery.timeout.ms": 300000,
+            "request.timeout.ms": 30000,
             "max.in.flight.requests.per.connection": 1,
             "enable.idempotence": True,
             "compression.type": "snappy",
@@ -57,10 +61,7 @@ class TestKafkaPublisher:
 
         # Verify DeliveryHandler was created with correct parameters
         mock_delivery_handler.assert_called_once_with(
-            max_retries=3,
             metrics_callback=None,
-            bootstrap_servers="localhost:9092",
-            retry_producer=mock_producer.return_value,
         )
 
     def test_init_custom_config(self, mock_producer, mock_delivery_handler):
@@ -80,7 +81,11 @@ class TestKafkaPublisher:
         expected_config = {
             "bootstrap.servers": "kafka1:9092,kafka2:9092",
             "acks": "all",
-            "retries": 0,
+            "retries": 2,  # Using max_retries from settings
+            "retry.backoff.ms": 100,
+            "retry.backoff.max.ms": 1000,
+            "delivery.timeout.ms": 300000,
+            "request.timeout.ms": 30000,
             "max.in.flight.requests.per.connection": 1,
             "enable.idempotence": True,
             "compression.type": "snappy",
@@ -91,10 +96,7 @@ class TestKafkaPublisher:
 
         # Verify DeliveryHandler parameters
         mock_delivery_handler.assert_called_once_with(
-            max_retries=2,
             metrics_callback=metrics_callback,
-            bootstrap_servers="kafka1:9092,kafka2:9092",
-            retry_producer=mock_producer.return_value,
         )
 
     def test_send_with_auto_generated_message_id(self, mock_producer, mock_delivery_handler, basic_settings):
@@ -114,15 +116,7 @@ class TestKafkaPublisher:
         assert message_id == "test-msg-123"
 
         # Verify tracking was set up
-        expected_original_data = {
-            "value": "Hello, World!",
-            "key": "test-key",
-            "headers": {"custom": "header", "message_id": "test-msg-123"},
-            "topic": "test-topic",
-        }
-        mock_handler_instance.track_message.assert_called_once_with(
-            "test-msg-123", "test-topic", {}, expected_original_data
-        )
+        mock_handler_instance.track_message.assert_called_once_with("test-msg-123", "test-topic", None)
 
         # Verify producer.produce was called correctly
         mock_producer_instance.produce.assert_called_once_with(
@@ -148,14 +142,8 @@ class TestKafkaPublisher:
         assert message_id == "custom-msg-id"
 
         # Verify tracking includes metadata
-        expected_original_data = {
-            "value": b"Binary message",
-            "key": None,
-            "headers": {"message_id": "custom-msg-id"},
-            "topic": "test-topic",
-        }
         mock_handler_instance.track_message.assert_called_once_with(
-            "custom-msg-id", "test-topic", {"correlation_id": "12345"}, expected_original_data
+            "custom-msg-id", "test-topic", {"correlation_id": "12345"}
         )
 
     def test_send_producer_exception(self, mock_producer, mock_delivery_handler, basic_settings):

@@ -26,7 +26,11 @@ class KafkaPublisher:
         config = {
             "bootstrap.servers": settings.bootstrap_servers,
             "acks": "all",  # Wait for all replicas
-            "retries": 0,  # We handle retries in delivery callback
+            "retries": settings.max_retries,  # Use Kafka's built-in retry mechanism
+            "retry.backoff.ms": settings.retry_backoff_ms,
+            "retry.backoff.max.ms": settings.retry_backoff_max_ms,
+            "delivery.timeout.ms": settings.delivery_timeout_ms,
+            "request.timeout.ms": settings.request_timeout_ms,
             "max.in.flight.requests.per.connection": 1,  # Ensure ordering
             "enable.idempotence": True,  # Prevent duplicates
             "compression.type": "snappy",  # Efficient compression
@@ -37,10 +41,7 @@ class KafkaPublisher:
 
         self._producer = Producer(config)
         self._delivery_handler = DeliveryHandler(
-            max_retries=settings.max_retries,
             metrics_callback=settings.metrics_callback,
-            bootstrap_servers=settings.bootstrap_servers,
-            retry_producer=self._producer,  # Pass producer for retries
         )
 
     @property
@@ -75,20 +76,12 @@ class KafkaPublisher:
         if not message_id:
             message_id = self._generate_message_id(topic)
 
-        # Ensure headers include message ID
+        # Prepare headers with message ID
         final_headers = {**(headers or {})}
         final_headers["message_id"] = message_id
 
-        # Capture original message data for potential retries
-        original_message_data = {
-            "value": message,
-            "key": key,
-            "headers": final_headers,
-            "topic": topic,  # Store topic for validation
-        }
-
-        # Register for delivery tracking with original message data
-        self._delivery_handler.track_message(message_id, topic, metadata or {}, original_message_data)
+        # Register for delivery tracking
+        self._delivery_handler.track_message(message_id, topic, metadata)
 
         try:
             self._producer.produce(

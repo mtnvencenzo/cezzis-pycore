@@ -18,31 +18,18 @@ class TestDeliveryHandlerInit:
         """Test initialization with default values."""
         handler = DeliveryHandler()
 
-        assert handler.max_retries == 3
-        assert handler.retry_backoff_ms == 1000
         assert handler.metrics_callback is None
         assert handler._pending_messages == {}
-        assert handler._retry_producer is None
-        assert handler._retry_timers == {}
-        assert handler._shutdown is False
 
     def test_init_with_custom_values(self):
         """Test initialization with custom values."""
         metrics_callback = mock.Mock()
-        retry_producer = mock.Mock()
 
         handler = DeliveryHandler(
-            max_retries=5,
-            retry_backoff_ms=2000,
             metrics_callback=metrics_callback,
-            retry_producer=retry_producer,
         )
 
-        assert handler.max_retries == 5
-        assert handler.retry_backoff_ms == 2000
         assert handler.metrics_callback == metrics_callback
-        assert handler._retry_producer == retry_producer
-        assert handler._shutdown is False
 
 
 class TestMessageTracking:
@@ -71,18 +58,6 @@ class TestMessageTracking:
 
         context = handler._pending_messages["msg-1"]
         assert context.metadata == metadata
-
-    def test_track_message_with_original_data(self):
-        """Test message tracking with original message data."""
-        handler = DeliveryHandler()
-        original_data = {"key": b"test-key", "value": b"test-value", "headers": {"content-type": "application/json"}}
-
-        handler.track_message("msg-1", "test-topic", {}, original_data)
-
-        context = handler._pending_messages["msg-1"]
-        # Original message data should be stored in the snapshot, not metadata
-        assert context.original_message_snapshot == original_data
-        assert "_original_message" not in context.metadata  # Should not leak into metadata
 
     def test_remove_pending_message(self):
         """Test removing pending messages."""
@@ -199,30 +174,27 @@ class TestBasicDeliveryHandling:
         # Should clean up tracking
         assert "msg-1" not in handler._pending_messages
 
-    def test_handle_failed_delivery_with_retry(self):
-        """Test failed delivery that should be retried."""
-        mock_producer = mock.Mock()
-        handler = DeliveryHandler(retry_producer=mock_producer)
+    def test_handle_failed_delivery_final_failure(self):
+        """Test failed delivery (final failure after Kafka retries exhausted)."""
+        handler = DeliveryHandler()
 
         # Track message
-        original_data = {"key": b"test", "value": b"data", "headers": {}}
-        handler.track_message("msg-1", "test-topic", {}, original_data)
+        handler.track_message("msg-1", "test-topic")
 
         # Create mock message and error
         mock_message = mock.Mock()
         mock_message.headers.return_value = [("message_id", b"msg-1")]
         mock_message.topic.return_value = "test-topic"
+        mock_message.partition.return_value = 0
+        mock_message.offset.return_value = 123
 
         error = KafkaError(KafkaError.NETWORK_EXCEPTION, "Network error")
 
-        # Handle failed delivery
+        # Handle failed delivery - this represents final failure after Kafka retries
         handler.handle_delivery(error, mock_message)
 
-        # Should still be tracked (retry scheduled)
-        assert "msg-1" in handler._pending_messages
-        # Attempt count should be incremented
-        context = handler._pending_messages["msg-1"]
-        assert context.attempt_count == 1
+        # Message should be removed from tracking (final failure)
+        assert "msg-1" not in handler._pending_messages
 
     def test_handle_failed_delivery_terminal(self):
         """Test failed delivery that is terminal."""
@@ -288,16 +260,15 @@ class TestMetricsReporting:
         error = KafkaError(KafkaError.TOPIC_AUTHORIZATION_FAILED, "Not authorized")
         handler.handle_delivery(error, mock_message)
 
-        # Should call metrics callback for failed delivery and terminal failure
-        assert metrics_callback.call_count == 2
+        # Should call metrics callback once for final failure
+        assert metrics_callback.call_count == 1
 
-        # First call for failure
-        first_call = metrics_callback.call_args_list[0]
-        assert first_call[0][0] == "kafka.message.failed"
-
-        # Second call for terminal failure
-        second_call = metrics_callback.call_args_list[1]
-        assert second_call[0][0] == "kafka.message.terminal_failure"
+        # Check the failure metric call
+        call_args = metrics_callback.call_args
+        assert call_args[0][0] == "kafka.message.failed"
+        metrics_data = call_args[0][1]
+        assert metrics_data["status"] == "fatal_error"
+        assert metrics_data["topic"] == "test-topic"
 
     def test_no_metrics_callback(self):
         """Test that no errors occur when metrics callback is None."""
@@ -313,43 +284,6 @@ class TestMetricsReporting:
 
         # Should not raise exception
         handler.handle_delivery(None, mock_message)
-
-
-class TestUtilityMethods:
-    """Test utility methods in DeliveryHandler."""
-
-    def test_safe_decode_value_bytes(self):
-        """Test safe decoding of bytes value."""
-        handler = DeliveryHandler()
-
-        result = handler._safe_decode_value(b"test message")
-        assert result == "test message"
-
-    def test_safe_decode_value_none(self):
-        """Test safe decoding of None value."""
-        handler = DeliveryHandler()
-
-        result = handler._safe_decode_value(None)
-        assert result is None
-
-    def test_safe_decode_value_string(self):
-        """Test safe decoding handles non-bytes input via str() fallback."""
-        handler = DeliveryHandler()
-
-        # The method will convert non-bytes through str()
-        result = handler._safe_decode_value(123)  # type: ignore
-        assert result == "123"
-
-    def test_safe_decode_value_with_errors(self):
-        """Test safe decoding with invalid UTF-8 bytes."""
-        handler = DeliveryHandler()
-
-        # Invalid UTF-8 sequence
-        invalid_bytes = b"\xff\xfe"
-        result = handler._safe_decode_value(invalid_bytes)
-
-        # Should not raise exception and return some string
-        assert isinstance(result, str)
 
 
 if __name__ == "__main__":
