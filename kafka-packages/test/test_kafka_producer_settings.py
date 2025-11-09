@@ -53,9 +53,9 @@ class TestKafkaProducerSettings:
 
     def test_init_with_custom_max_retries(self):
         """Test initialization with custom max_retries."""
-        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=0)
+        settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=1)
 
-        assert settings.max_retries == 0
+        assert settings.max_retries == 1
 
     def test_init_with_none_producer_config(self):
         """Test initialization with None producer_config defaults to empty dict."""
@@ -75,8 +75,17 @@ class TestKafkaProducerSettings:
 
     def test_negative_max_retries_raises_error(self):
         """Test that negative max_retries raises ValueError."""
-        with pytest.raises(ValueError, match="Max retries cannot be negative"):
+        with pytest.raises(
+            ValueError, match="Max retries must be at least 1 to support idempotent producer configuration"
+        ):
             KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=-1)
+
+    def test_zero_max_retries_raises_error(self):
+        """Test that max_retries=0 raises ValueError due to idempotent producer requirement."""
+        with pytest.raises(
+            ValueError, match="Max retries must be at least 1 to support idempotent producer configuration"
+        ):
+            KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=0)
 
     def test_producer_config_is_copied(self):
         """Test that producer_config is properly handled as a copy."""
@@ -105,7 +114,7 @@ class TestKafkaProducerSettings:
         settings = KafkaProducerSettings(bootstrap_servers=servers)
         assert settings.bootstrap_servers == servers
 
-    @pytest.mark.parametrize("retries", [0, 1, 3, 5, 10, 100])
+    @pytest.mark.parametrize("retries", [1, 3, 5, 10, 100])
     def test_valid_max_retries(self, retries):
         """Test various valid max_retries values."""
         settings = KafkaProducerSettings(bootstrap_servers="localhost:9092", max_retries=retries)

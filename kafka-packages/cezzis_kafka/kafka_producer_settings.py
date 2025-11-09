@@ -44,14 +44,14 @@ class KafkaProducerSettings:
 
         Raises:
             ValueError: If bootstrap_servers is empty or invalid.
-            ValueError: If max_retries is negative.
+            ValueError: If max_retries is less than 1 (required for idempotent producer).
             ValueError: If timeout values are invalid.
         """
         if not bootstrap_servers or bootstrap_servers.strip() == "":
             raise ValueError("Bootstrap servers cannot be empty")
 
-        if max_retries < 0:
-            raise ValueError("Max retries cannot be negative")
+        if max_retries < 1:
+            raise ValueError("Max retries must be at least 1 to support idempotent producer configuration")
 
         if retry_backoff_ms < 1 or retry_backoff_ms > 300000:
             raise ValueError("Retry backoff must be between 1 and 300000 milliseconds")
