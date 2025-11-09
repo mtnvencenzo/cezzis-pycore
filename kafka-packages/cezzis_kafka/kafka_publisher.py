@@ -5,7 +5,6 @@ from typing import Any, Dict, Optional
 
 from confluent_kafka import Producer
 
-from cezzis_kafka.delivery_handler import DeliveryHandler
 from cezzis_kafka.kafka_publisher_settings import KafkaPublisherSettings
 
 logger = logging.getLogger(__name__)
@@ -40,9 +39,6 @@ class KafkaPublisher:
         config.update(settings.producer_config)
 
         self._producer = Producer(config)
-        self._delivery_handler = DeliveryHandler(
-            metrics_callback=settings.metrics_callback,
-        )
 
     @property
     def broker_url(self) -> str:
@@ -80,16 +76,13 @@ class KafkaPublisher:
         final_headers = {**(headers or {})}
         final_headers["message_id"] = message_id
 
-        # Register for delivery tracking
-        self._delivery_handler.track_message(message_id, topic, metadata)
-
         try:
             self._producer.produce(
                 topic=topic,
                 value=message,
                 key=key,
                 headers=final_headers,
-                on_delivery=self._delivery_handler.handle_delivery,
+                on_delivery=self.settings.on_delivery,
             )
 
             logger.info(
@@ -100,9 +93,6 @@ class KafkaPublisher:
             return message_id
 
         except Exception as e:
-            # Remove from tracking on immediate failure
-            self._delivery_handler.remove_pending_message(message_id)
-
             logger.error(
                 "Failed to queue message for delivery",
                 exc_info=True,
@@ -128,9 +118,6 @@ class KafkaPublisher:
         """Close the producer and ensure all messages are delivered."""
         # First flush any pending messages
         self.flush()
-
-        # Close the delivery handler (which will close DLQ producer and cancel retries)
-        self._delivery_handler.close()
 
         logger.info("Kafka publisher closed successfully")
 

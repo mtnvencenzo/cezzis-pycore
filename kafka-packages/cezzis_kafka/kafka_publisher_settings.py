@@ -1,5 +1,7 @@
 from typing import Any, Callable, Dict, Optional
 
+from confluent_kafka import KafkaError, Message
+
 
 class KafkaPublisherSettings:
     """Settings for Kafka Publisher.
@@ -11,7 +13,6 @@ class KafkaPublisherSettings:
         retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries.
         delivery_timeout_ms (int): Total timeout for message delivery including retries.
         request_timeout_ms (int): Timeout for individual produce requests.
-        metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
         producer_config (Optional[Dict[str, Any]]): Additional producer configuration.
 
     Methods:
@@ -25,7 +26,7 @@ class KafkaPublisherSettings:
         retry_backoff_max_ms: int = 1000,
         delivery_timeout_ms: int = 300000,
         request_timeout_ms: int = 30000,
-        metrics_callback: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+        on_delivery: Optional[Callable[[KafkaError | None, Message], None]] = None,
         producer_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Initialize the KafkaPublisherSettings
@@ -37,7 +38,6 @@ class KafkaPublisherSettings:
             retry_backoff_max_ms (int): Maximum backoff time in milliseconds between retries. Defaults to 1000.
             delivery_timeout_ms (int): Total timeout for message delivery including retries. Defaults to 300000 (5 minutes).
             request_timeout_ms (int): Timeout for individual produce requests. Defaults to 30000 (30 seconds).
-            metrics_callback (Optional[Callable[[str, Dict[str, Any]], None]]): Callback for reporting metrics.
             producer_config (Optional[Dict[str, Any]]): Additional producer configuration to override defaults.
 
         Raises:
@@ -69,5 +69,5 @@ class KafkaPublisherSettings:
         self.retry_backoff_max_ms = retry_backoff_max_ms
         self.delivery_timeout_ms = delivery_timeout_ms
         self.request_timeout_ms = request_timeout_ms
-        self.metrics_callback = metrics_callback
         self.producer_config = (producer_config or {}).copy()  # Make a copy to avoid mutation
+        self.on_delivery = on_delivery

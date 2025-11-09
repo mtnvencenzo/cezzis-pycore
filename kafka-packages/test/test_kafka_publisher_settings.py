@@ -16,13 +16,17 @@ class TestKafkaPublisherSettings:
 
         assert settings.bootstrap_servers == "localhost:9092"
         assert settings.max_retries == 3  # Default value
-        assert settings.metrics_callback is None
+        assert settings.retry_backoff_ms == 100  # Default value
+        assert settings.retry_backoff_max_ms == 1000  # Default value
+        assert settings.delivery_timeout_ms == 300000  # Default value
+        assert settings.request_timeout_ms == 30000  # Default value
+        assert settings.on_delivery is None
         assert settings.producer_config == {}
 
     def test_init_with_all_parameters(self):
         """Test initialization with all parameters."""
 
-        def mock_metrics_callback(metric_name, metric_data):
+        def mock_delivery_callback(error, message):
             pass
 
         producer_config = {"batch.size": 16384, "linger.ms": 10}
@@ -30,13 +34,21 @@ class TestKafkaPublisherSettings:
         settings = KafkaPublisherSettings(
             bootstrap_servers="kafka1:9092,kafka2:9092",
             max_retries=5,
-            metrics_callback=mock_metrics_callback,
+            retry_backoff_ms=200,
+            retry_backoff_max_ms=2000,
+            delivery_timeout_ms=600000,
+            request_timeout_ms=60000,
+            on_delivery=mock_delivery_callback,
             producer_config=producer_config,
         )
 
         assert settings.bootstrap_servers == "kafka1:9092,kafka2:9092"
         assert settings.max_retries == 5
-        assert settings.metrics_callback == mock_metrics_callback
+        assert settings.retry_backoff_ms == 200
+        assert settings.retry_backoff_max_ms == 2000
+        assert settings.delivery_timeout_ms == 600000
+        assert settings.request_timeout_ms == 60000
+        assert settings.on_delivery == mock_delivery_callback
         assert settings.producer_config == producer_config
 
     def test_init_with_custom_max_retries(self):
