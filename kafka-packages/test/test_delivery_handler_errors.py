@@ -246,7 +246,7 @@ class TestErrorClassificationIntegration:
 
         handler = DeliveryHandler(
             max_retries=1,  # Only one retry allowed
-            retry_producer=mock_producer
+            retry_producer=mock_producer,
         )
 
         # Track message

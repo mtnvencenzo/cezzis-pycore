@@ -195,7 +195,14 @@ class TestDeliveryContext:
 
         # Fields should be in the expected order
         field_names = list(context.__dataclass_fields__.keys())
-        expected_fields = ["message_id", "topic", "attempt_count", "original_timestamp", "metadata", "original_message_snapshot"]
+        expected_fields = [
+            "message_id",
+            "topic",
+            "attempt_count",
+            "original_timestamp",
+            "metadata",
+            "original_message_snapshot",
+        ]
         assert field_names == expected_fields
 
     def test_attempt_count_edge_cases(self):

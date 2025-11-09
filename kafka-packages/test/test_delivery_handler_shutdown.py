@@ -49,7 +49,6 @@ class TestShutdownAndCleanup:
         # Producer should not have been called for retries after close
         assert mock_producer.produce.call_count == 0
 
-
     def test_close_clears_pending_messages(self):
         """Test that close() clears all pending messages."""
         handler = DeliveryHandler()
@@ -147,7 +146,7 @@ class TestShutdownAndCleanup:
         """Test that multiple calls to close() are safe."""
 
         handler = DeliveryHandler()
-  
+
         # Track some data
         handler.track_message("multi-close", "test-topic")
 

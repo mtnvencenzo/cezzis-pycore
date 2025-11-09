@@ -107,9 +107,7 @@ class TestKafkaPublisherSettings:
         dev_settings = KafkaPublisherSettings(**base_config)
 
         # Production settings with DLQ
-        prod_settings = KafkaPublisherSettings(
-            **base_config, producer_config={"acks": "all", "retries": 5}
-        )
+        prod_settings = KafkaPublisherSettings(**base_config, producer_config={"acks": "all", "retries": 5})
 
         assert dev_settings.producer_config == {}
         assert prod_settings.producer_config == {"acks": "all", "retries": 5}

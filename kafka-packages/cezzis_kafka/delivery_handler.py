@@ -1,4 +1,3 @@
-import json
 import logging
 import threading
 import time
@@ -65,12 +64,8 @@ class DeliveryHandler:
         """
         # Create a shallow copy of metadata to avoid mutating caller's data
         sanitized_metadata = (metadata or {}).copy()
-        
-        context = DeliveryContext(
-            message_id=message_id, 
-            topic=topic, 
-            metadata=sanitized_metadata
-        )
+
+        context = DeliveryContext(message_id=message_id, topic=topic, metadata=sanitized_metadata)
 
         # Store original message data separately for retry attempts (not in metadata)
         if original_message_data:
@@ -427,7 +422,7 @@ class DeliveryHandler:
                 "topic": msg.topic(),
                 "attempt_count": context.attempt_count,
                 "status": status.value,
-                "error_code": err.code()
+                "error_code": err.code(),
             },
         )
 
