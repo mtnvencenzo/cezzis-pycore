@@ -211,12 +211,12 @@ async def spawn_consumers_async(
         logger.info("All async consumers stopped")
 
 
-def shutdown_async_kafka() -> None:
+def shutdown_consumers() -> None:
     """Shutdown the shared thread pool for graceful application exit.
 
     Call this during application shutdown to ensure all background threads
     are properly closed. This is important for production deployments.
     """
-    logger.info("Shutting down Kafka async thread pool...")
+    logger.info("Shutting down consumer async thread pool...")
     _kafka_thread_pool.shutdown(wait=True)
-    logger.info("Kafka async thread pool shut down successfully")
+    logger.info("Consumer async thread pool shut down successfully")

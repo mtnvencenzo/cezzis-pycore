@@ -6,7 +6,7 @@ from typing import Optional
 
 from confluent_kafka import Consumer, Message
 
-from cezzis_kafka.async_kafka_consumer import shutdown_async_kafka, start_consumer_async
+from cezzis_kafka.async_kafka_consumer import shutdown_consumers, start_consumer_async
 from cezzis_kafka.iasync_kafka_message_processor import IAsyncKafkaMessageProcessor
 from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
 
@@ -106,5 +106,5 @@ if __name__ == "__main__":
         print("\n👋 Async consumer stopped gracefully")
     finally:
         # Important: Shutdown thread pool for production deployments
-        shutdown_async_kafka()
+        shutdown_consumers()
         print("🧹 Thread pool cleaned up")

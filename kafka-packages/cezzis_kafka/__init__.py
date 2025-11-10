@@ -1,6 +1,6 @@
 """Cezzis Kafka - A lightweight library for Apache Kafka message consumption."""
 
-from cezzis_kafka.async_kafka_consumer import spawn_consumers_async, start_consumer_async
+from cezzis_kafka.async_kafka_consumer import shutdown_consumers, spawn_consumers_async, start_consumer_async
 from cezzis_kafka.iasync_kafka_message_processor import IAsyncKafkaMessageProcessor
 from cezzis_kafka.ikafka_message_processor import IKafkaMessageProcessor
 from cezzis_kafka.kafka_consumer import spawn_consumers, start_consumer
@@ -26,4 +26,5 @@ __all__ = [
     "IAsyncKafkaMessageProcessor",
     "start_consumer_async",
     "spawn_consumers_async",
+    "shutdown_consumers",
 ]
