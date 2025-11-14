@@ -10,6 +10,7 @@ from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.http._log_exporter import OTLPLogExporter
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.propagate import inject
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
@@ -176,3 +177,27 @@ def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.setLevel(level)
     return logger
+
+
+def get_propagation_headers(extra: dict[str, bytes] = {}) -> dict[str, bytes]:
+    """Get the current propagation headers for context propagation.
+
+    Args:
+        extra (dict[str, bytes]): Additional headers to include. Values must be bytes.
+
+    Returns:
+        dict[str, bytes]: A dictionary of propagation headers (all values are bytes).
+    """
+
+    # Create headers dict for trace propagation
+    headers = {}
+    inject(headers)
+
+    # Convert string values to bytes for Kafka headers
+    injected_headers = {
+        key: value.encode("utf-8") if isinstance(value, str) else value for key, value in headers.items()
+    }
+
+    injected_headers.update(extra)
+
+    return injected_headers

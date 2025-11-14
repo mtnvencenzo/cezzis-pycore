@@ -2,6 +2,7 @@
 
 from .otel import (
     get_logger,
+    get_propagation_headers,
     initialize_otel,
     shutdown_otel,
 )
@@ -22,6 +23,7 @@ __all__ = [
     "initialize_otel",
     "shutdown_otel",
     "get_logger",
+    "get_propagation_headers",
     # Metadata
     "__version__",
 ]

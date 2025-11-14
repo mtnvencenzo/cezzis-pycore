@@ -10,6 +10,7 @@ from cezzis_otel.otel import (
     _initialize_logging,
     _initialize_tracing,
     get_logger,
+    get_propagation_headers,
     initialize_otel,
     log_provider,
     shutdown_otel,
@@ -392,6 +393,29 @@ class TestShutdownOtel:
             call("Flushing and shutting down log provider"),
         ]
         mock_logging_info.assert_has_calls(expected_calls)
+
+    @patch("cezzis_otel.otel.inject", lambda h: h.update({"trace-id": "abc123", "user": "alice"}))
+    def test_get_propagation_headers_basic(mocker):
+        # Mock inject to populate headers
+        result = get_propagation_headers()
+        assert isinstance(result, dict)
+        assert result["trace-id"] == b"abc123"
+        assert result["user"] == b"alice"
+
+    @patch("cezzis_otel.otel.inject", lambda h: h.update({"trace-id": "abc123"}))
+    def test_get_propagation_headers_with_extra(mocker):
+        extra = {"custom": b"value", "trace-id": b"override"}
+        result = get_propagation_headers(extra)
+        # extra should override trace-id
+        assert result["trace-id"] == b"override"
+        assert result["custom"] == b"value"
+
+    @patch("cezzis_otel.otel.inject", lambda h: h.update({"trace-id": 123, "user": b"bob"}))
+    def test_get_propagation_headers_non_str_values(mocker):
+        result = get_propagation_headers()
+        # int should not be encoded, bytes should pass through
+        assert result["trace-id"] == 123
+        assert result["user"] == b"bob"
 
     @patch("logging.getLogger")
     def test_shutdown_otel_with_no_providers(self, mock_get_logger):
