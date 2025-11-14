@@ -179,7 +179,7 @@ def get_logger(name: str, level: int = logging.INFO) -> logging.Logger:
     return logger
 
 
-def get_propagation_headers(extra: dict[str, bytes] = {}) -> dict[str, bytes]:
+def get_propagation_headers(extra: dict[str, str | bytes] = {}) -> dict[str, str | bytes]:
     """Get the current propagation headers for context propagation.
 
     Args:

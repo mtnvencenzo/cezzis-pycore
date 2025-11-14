@@ -404,10 +404,10 @@ class TestShutdownOtel:
 
     @patch("cezzis_otel.otel.inject", lambda h: h.update({"trace-id": "abc123"}))
     def test_get_propagation_headers_with_extra(mocker):
-        extra = {"custom": b"value", "trace-id": b"override"}
+        extra = {"custom": b"value", "trace-id": "override"}
         result = get_propagation_headers(extra)
         # extra should override trace-id
-        assert result["trace-id"] == b"override"
+        assert result["trace-id"] == "override"
         assert result["custom"] == b"value"
 
     @patch("cezzis_otel.otel.inject", lambda h: h.update({"trace-id": 123, "user": b"bob"}))
