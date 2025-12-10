@@ -1,4 +1,5 @@
 import socket
+from typing import Optional
 
 
 class OTelSettings:
@@ -14,6 +15,9 @@ class OTelSettings:
         instance_id (str): The unique identifier for the service instance.
         enable_logging (bool): Flag to enable logging.
         enable_tracing (bool): Flag to enable tracing.
+        certificate_file (Optional[str]): Path to the CA certificate file for secure connections.
+        client_certificate_file (Optional[str]): Path to the client certificate file for mutual TLS authentication.
+        client_key_file (Optional[str]): Path to the client key file for mutual TLS authentication
 
     Methods:
         __init__: Initializes the OTelSettings with provided values.
@@ -30,6 +34,9 @@ class OTelSettings:
         instance_id: str,
         enable_logging: bool = True,
         enable_tracing: bool = True,
+        certificate_file: Optional[str] = None,
+        client_certificate_file: Optional[str] = None,
+        client_key_file: Optional[str] = None,
     ) -> None:
         """Initialize OTelSettings with provided values.
 
@@ -43,6 +50,10 @@ class OTelSettings:
             instance_id (str): The unique identifier for the service instance.
             enable_logging (bool): Flag to enable logging. Defaults to True.
             enable_tracing (bool): Flag to enable tracing. Defaults to True.
+            certificate_file (str | None): Path to the CA certificate file for secure connections. Defaults to None.
+            client_certificate_file (str | None): Path to the client certificate file for mutual TLS authentication. Defaults to None.
+            client_key_file (str | None): Path to the client key file
+
 
         Returns:
             None
@@ -72,3 +83,6 @@ class OTelSettings:
         self.otlp_exporter_auth_header = otlp_exporter_auth_header
         self.enable_logging = enable_logging
         self.enable_tracing = enable_tracing
+        self.certificate_file = certificate_file
+        self.client_certificate_file = client_certificate_file
+        self.client_key_file = client_key_file

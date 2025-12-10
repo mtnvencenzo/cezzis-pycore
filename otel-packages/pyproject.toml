@@ -18,6 +18,14 @@ dependencies = [
     "opentelemetry-semantic-conventions (>=0.59b0,<0.60)"
 ]
 
+[tool.poetry]
+exclude = [
+    "**/test_*.py", # Excludes files starting with 'test_'
+    "**/*_test.py", # Excludes files ending with '_test.py'
+    "**/tests/**/*.py", # Excludes all .py files within 'tests' directories
+    "**/tests", # Excludes the 'tests' directory itself
+    "**/*test*.py", # More general pattern to exclude any .py file with 'test' in its name
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -27,8 +35,8 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "pytest (>=8.4.2,<9.0.0)",
     "pytest-cov (>=4.0.0,<6.0.0)",
-    "ruff (>=0.14.3,<0.15.0)",
     "pytest-mock (>=3.15.1,<4.0.0)",
+    "ruff (>=0.14.3,<0.15.0)",
     "mypy (>=1.18.2,<2.0.0)"
 ]
 

@@ -134,7 +134,11 @@ class TestInitializeTracing:
 
         # Verify OTLP exporter setup
         mock_otlp_exporter.assert_called_once_with(
-            endpoint="http://localhost:4318/v1/traces", headers={"authorization": "Bearer test-token"}
+            endpoint="http://localhost:4318/v1/traces",
+            headers={"authorization": "Bearer test-token"},
+            certificate_file=None,
+            client_certificate_file=None,
+            client_key_file=None,
         )
 
         # Verify span processor setup
@@ -261,7 +265,11 @@ class TestInitializeLogging:
 
         # Verify OTLP exporter setup
         mock_otlp_exporter.assert_called_once_with(
-            endpoint="http://localhost:4318/v1/logs", headers={"authorization": "Bearer test-token"}
+            endpoint="http://localhost:4318/v1/logs",
+            headers={"authorization": "Bearer test-token"},
+            certificate_file=None,
+            client_certificate_file=None,
+            client_key_file=None,
         )
 
         # Verify log processor setup

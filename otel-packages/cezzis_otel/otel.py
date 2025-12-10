@@ -82,7 +82,11 @@ def _initialize_tracing(
         otlp_exporter = OTLPSpanExporter(
             endpoint=f"{settings.otlp_exporter_endpoint}/v1/traces",
             headers={"authorization": settings.otlp_exporter_auth_header},
+            certificate_file=settings.certificate_file,
+            client_certificate_file=settings.client_certificate_file,
+            client_key_file=settings.client_key_file,
         )
+
         span_processor = BatchSpanProcessor(otlp_exporter)
         trace_provider.add_span_processor(span_processor)
 
@@ -117,6 +121,9 @@ def _initialize_logging(
         otlp_log_exporter = OTLPLogExporter(
             endpoint=f"{settings.otlp_exporter_endpoint}/v1/logs",
             headers={"authorization": settings.otlp_exporter_auth_header},
+            certificate_file=settings.certificate_file,
+            client_certificate_file=settings.client_certificate_file,
+            client_key_file=settings.client_key_file,
         )
         otlp_log_processor = BatchLogRecordProcessor(otlp_log_exporter)
         log_provider.add_log_record_processor(otlp_log_processor)
