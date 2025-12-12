@@ -18,6 +18,7 @@ class OTelSettings:
         certificate_file (Optional[str]): Path to the CA certificate file for secure connections.
         client_certificate_file (Optional[str]): Path to the client certificate file for mutual TLS authentication.
         client_key_file (Optional[str]): Path to the client key file for mutual TLS authentication
+        enable_console_logging (Optional[bool]): Flag to enable console logging output.
 
     Methods:
         __init__: Initializes the OTelSettings with provided values.
@@ -37,6 +38,7 @@ class OTelSettings:
         certificate_file: Optional[str] = None,
         client_certificate_file: Optional[str] = None,
         client_key_file: Optional[str] = None,
+        enable_console_logging: Optional[bool] = False,
     ) -> None:
         """Initialize OTelSettings with provided values.
 
@@ -53,6 +55,7 @@ class OTelSettings:
             certificate_file (str | None): Path to the CA certificate file for secure connections. Defaults to None.
             client_certificate_file (str | None): Path to the client certificate file for mutual TLS authentication. Defaults to None.
             client_key_file (str | None): Path to the client key file
+            enable_console_logging (bool | None): Flag to enable console logging output. Defaults to False.
 
 
         Returns:
@@ -86,3 +89,4 @@ class OTelSettings:
         self.certificate_file = certificate_file
         self.client_certificate_file = client_certificate_file
         self.client_key_file = client_key_file
+        self.enable_console_logging = enable_console_logging

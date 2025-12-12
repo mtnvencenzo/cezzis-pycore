@@ -2,7 +2,6 @@
 # https://github.com/open-telemetry/opentelemetry-python/blob/main/docs/examples/logs/example.py
 # ----------------------------------------------------------------------------------------------
 import logging
-import os
 import socket
 from typing import Callable, Optional
 
@@ -138,7 +137,7 @@ def _initialize_logging(
     logging.getLogger().addHandler(otel_handler)
 
     # Add simple console handler for readable local output
-    if os.environ.get("ENV") == "local":
+    if settings.enable_console_logging:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_formatter = logging.Formatter(
