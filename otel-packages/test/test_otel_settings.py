@@ -26,6 +26,7 @@ class TestOTelSettings:
             instance_id="test-instance",
             enable_logging=False,
             enable_tracing=True,
+            enable_console_logging=True,
         )
         assert settings.service_name == "test-service"
         assert settings.service_namespace == "test-namespace"
@@ -36,6 +37,7 @@ class TestOTelSettings:
         assert settings.instance_id == "test-instance"
         assert settings.enable_logging is False
         assert settings.enable_tracing is True
+        assert settings.enable_console_logging is True
 
     def test_uses_defaults_correctly(self) -> None:
         settings = OTelSettings(
@@ -57,6 +59,7 @@ class TestOTelSettings:
         # Test default values for enable_* flags
         assert settings.enable_logging is True
         assert settings.enable_tracing is True
+        assert settings.enable_console_logging is False
 
     def test_handles_empty_service_name_with_default(self) -> None:
         settings = OTelSettings(

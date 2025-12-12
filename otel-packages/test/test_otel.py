@@ -323,6 +323,7 @@ class TestInitializeLogging:
             environment="production",
             instance_id="test-instance",
             enable_logging=True,
+            enable_console_logging=True,
         )
 
         with patch("logging.StreamHandler") as mock_stream_handler:
