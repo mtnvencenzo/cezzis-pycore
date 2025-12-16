@@ -60,7 +60,8 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
                 {
                     "bootstrap.servers": processor.kafka_settings().bootstrap_servers,
                     "group.id": processor.kafka_settings().consumer_group,
-                    "auto.offset.reset": "earliest",
+                    "auto.offset.reset": processor.kafka_settings().auto_offset_reset,
+                    "max.poll.interval.ms": processor.kafka_settings().max_poll_interval_ms,
                 }
             )
             return consumer

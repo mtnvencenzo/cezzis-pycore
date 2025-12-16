@@ -85,3 +85,41 @@ class TestKafkaConsumerSettings:
                 topic_name="test-topic",
                 num_consumers=0,
             )
+
+    @pytest.mark.parametrize("auto_offset_reset", ["earliest", "latest", "none"])
+    def test_auto_offset_reset_accepts_available_values(self, auto_offset_reset: str):
+        """Test that auto_offset_reset values allows acceptable values."""
+        KafkaConsumerSettings(
+            consumer_id=1,
+            bootstrap_servers="localhost:9092",
+            consumer_group="test-group",
+            topic_name="test-topic",
+            num_consumers=1,
+            auto_offset_reset=auto_offset_reset,
+        )
+
+    @pytest.mark.parametrize("auto_offset_reset", ["earlier", "", ""])
+    def test_invalid_auto_offset_reset_raises_error(self, auto_offset_reset: str):
+        """Test that invalid auto_offset_reset values raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid auto offset reset value"):
+            KafkaConsumerSettings(
+                consumer_id=1,
+                bootstrap_servers="localhost:9092",
+                consumer_group="test-group",
+                topic_name="test-topic",
+                num_consumers=1,
+                auto_offset_reset=auto_offset_reset,
+            )
+
+    @pytest.mark.parametrize("max_poll_interval_ms", [0, -1])
+    def test_invalid_max_poll_interval_ms_raises_error(self, max_poll_interval_ms: int):
+        """Test that invalid max_poll_interval_ms values raise ValueError."""
+        with pytest.raises(ValueError, match="Max poll interval must be at least 1 ms"):
+            KafkaConsumerSettings(
+                consumer_id=1,
+                bootstrap_servers="localhost:9092",
+                consumer_group="test-group",
+                topic_name="test-topic",
+                num_consumers=1,
+                max_poll_interval_ms=max_poll_interval_ms,
+            )
