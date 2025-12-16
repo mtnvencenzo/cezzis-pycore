@@ -160,6 +160,8 @@ async def spawn_consumers_async(
     bootstrap_servers: str,
     consumer_group: str,
     topic_name: str,
+    max_poll_interval_ms: int = 300000,
+    auto_offset_reset: str = "earliest",
 ) -> None:
     """Spawn multiple async Kafka consumers under a single consumer group.
 
@@ -169,6 +171,8 @@ async def spawn_consumers_async(
         bootstrap_servers (str): The Kafka bootstrap servers.
         consumer_group (str): The consumer group ID.
         topic_name (str): The topic name to subscribe to.
+        max_poll_interval_ms (int): Maximum poll interval in milliseconds. Defaults to 300000.
+        auto_offset_reset (str): Auto offset reset policy. Defaults to "earliest".  Accepted values are "earliest", "latest", and "none".
     """
 
     logger.info(
@@ -178,6 +182,8 @@ async def spawn_consumers_async(
             "messaging.kafka.bootstrap_servers": bootstrap_servers,
             "messaging.kafka.consumer_group": consumer_group,
             "messaging.kafka.topic_name": topic_name,
+            "messaging.kafka.max_poll_interval_ms": max_poll_interval_ms,
+            "messaging.kafka.auto_offset_reset": auto_offset_reset,
         },
     )
 
@@ -192,6 +198,8 @@ async def spawn_consumers_async(
                 consumer_group=consumer_group,
                 topic_name=topic_name,
                 num_consumers=num_consumers,
+                max_poll_interval_ms=max_poll_interval_ms,
+                auto_offset_reset=auto_offset_reset,
             )
         )
 
