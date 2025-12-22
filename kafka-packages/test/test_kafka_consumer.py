@@ -61,7 +61,6 @@ class MockProcessor(IKafkaMessageProcessor):
 def mock_settings() -> KafkaConsumerSettings:
     """Fixture providing test Kafka consumer settings."""
     return KafkaConsumerSettings(
-        consumer_id=1,
         bootstrap_servers="localhost:9092",
         consumer_group="test-group",
         topic_name="test-topic",
@@ -391,7 +390,7 @@ class TestSpawnConsumers:
 
     @patch("cezzis_kafka.kafka_consumer.Process")
     def test_creates_processors_with_unique_ids(self, mock_process_class: MagicMock, stop_event: EventClass) -> None:
-        """Test that each spawned consumer gets a unique consumer_id."""
+        """Test that each spawned consumer gets unique settings"""
         captured_settings: list[KafkaConsumerSettings] = []
 
         def capture_process(*args: Any, **kwargs: Any) -> MagicMock:
@@ -417,10 +416,6 @@ class TestSpawnConsumers:
             consumer_group="test-group",
             topic_name="test-topic",
         )
-
-        # Verify consumer_ids are 0, 1, 2
-        consumer_ids = [settings.consumer_id for settings in captured_settings]
-        assert consumer_ids == [0, 1, 2]
 
         # Verify all have the same group and topic
         for settings in captured_settings:

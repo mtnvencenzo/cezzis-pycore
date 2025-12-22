@@ -30,7 +30,6 @@ class SimpleAsyncProcessor(IAsyncKafkaMessageProcessor):
     def kafka_settings(self) -> KafkaConsumerSettings:
         """Returns the Kafka consumer settings."""
         return KafkaConsumerSettings(
-            consumer_id=1,
             bootstrap_servers="localhost:9092",
             consumer_group="async_test_group",
             topic_name="test_topic",

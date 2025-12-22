@@ -84,7 +84,6 @@ from multiprocessing import Event
 
 # Configure Kafka settings
 settings = KafkaConsumerSettings(
-    consumer_id=1,
     bootstrap_servers="localhost:9092",
     consumer_group="my-consumer-group",
     topic_name="my-topic",
@@ -111,12 +110,11 @@ from multiprocessing import Process, Event
 import signal
 import sys
 
-def run_consumer_process(consumer_id: int, shared_stop_event: Event):
+def run_consumer_process(shared_stop_event: Event):
     """Run a consumer in a separate process."""
     from cezzis_kafka import KafkaConsumerSettings, start_consumer
     
     settings = KafkaConsumerSettings(
-        consumer_id=consumer_id,
         bootstrap_servers="localhost:9092",
         consumer_group="order-processing-group",
         topic_name="orders",
@@ -278,7 +276,6 @@ producer_config = {
 Configuration class for Kafka consumers.
 
 **Attributes:**
-- `consumer_id` (int): Unique identifier for the consumer instance
 - `bootstrap_servers` (str): Comma-separated list of Kafka broker addresses
 - `consumer_group` (str): Consumer group ID for coordinated consumption
 - `topic_name` (str): Name of the Kafka topic to consume from

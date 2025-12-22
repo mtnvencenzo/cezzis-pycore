@@ -33,7 +33,6 @@ def start_consumer(stop_event: EventType, processor: IKafkaMessageProcessor) -> 
         logger.info(
             "Keyboard interrupt received, shutting down consumer",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -45,7 +44,6 @@ def start_consumer(stop_event: EventType, processor: IKafkaMessageProcessor) -> 
             "Unexpected error in consumer, shutting down consumer",
             exc_info=True,
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -94,7 +92,6 @@ def spawn_consumers(
     for i in range(num_consumers):
         processor = factory_type.CreateNew(
             kafka_settings=KafkaConsumerSettings(
-                consumer_id=i,
                 bootstrap_servers=bootstrap_servers,
                 consumer_group=consumer_group,
                 topic_name=topic_name,
@@ -115,7 +112,6 @@ def spawn_consumers(
         logger.info(
             "Started Kafka consumer process",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -128,7 +124,6 @@ def spawn_consumers(
         logger.info(
             "Kafka consumer process completed",
             extra={
-                "messaging.kafka.consumer_id": i,
                 "process.pid": p.pid,
                 "process.exitcode": p.exitcode,
                 "process.name": p.name,
@@ -150,7 +145,6 @@ def _create_consumer(processor: IKafkaMessageProcessor) -> Consumer | None:
     logger.info(
         "Creating Kafka consumer",
         extra={
-            "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
             "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
             "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
             "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -175,7 +169,6 @@ def _create_consumer(processor: IKafkaMessageProcessor) -> Consumer | None:
         logger.info(
             "Kafka consumer created successfully",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -188,7 +181,6 @@ def _create_consumer(processor: IKafkaMessageProcessor) -> Consumer | None:
         logger.error(
             f"Failed to create Kafka consumer. Exiting {str(e)}",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -214,7 +206,6 @@ def _subscribe_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -
     logger.info(
         "Subscribing consumer to topic",
         extra={
-            "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
             "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
             "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
             "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -227,7 +218,6 @@ def _subscribe_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -
         logger.info(
             "Consumer subscribed successfully",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -241,7 +231,6 @@ def _subscribe_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -
             "Error subscribing consumer to Kafka topic",
             exc_info=True,
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -264,7 +253,6 @@ def _start_polling(stop_event: EventType, consumer: Consumer, processor: IKafkaM
     logger.info(
         "Start consumer polling for messages...",
         extra={
-            "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
             "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
             "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
             "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -283,7 +271,6 @@ def _start_polling(stop_event: EventType, consumer: Consumer, processor: IKafkaM
                 logger.info(
                     "End of partition reached",
                     extra={
-                        "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                         "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                         "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                         "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -298,7 +285,6 @@ def _start_polling(stop_event: EventType, consumer: Consumer, processor: IKafkaM
                     "Consumer message error",
                     exc_info=True,
                     extra={
-                        "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                         "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                         "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                         "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -326,7 +312,6 @@ def _close_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -> No
     logger.info(
         "Shutting down kafka consumer",
         extra={
-            "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
             "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
             "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
             "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -339,7 +324,6 @@ def _close_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -> No
         logger.info(
             "Committing offsets for kafka consumer",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -350,7 +334,6 @@ def _close_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -> No
         logger.error(
             "Error committing offsets for kafka consumer",
             extra={
-                "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
                 "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
                 "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
                 "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
@@ -361,7 +344,6 @@ def _close_consumer(consumer: Consumer, processor: IKafkaMessageProcessor) -> No
     logger.info(
         "Closing kafka consumer",
         extra={
-            "messaging.kafka.consumer_id": processor.kafka_settings().consumer_id,
             "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
             "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
             "messaging.kafka.topic_name": processor.kafka_settings().topic_name,

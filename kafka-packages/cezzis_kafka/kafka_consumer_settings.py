@@ -2,7 +2,6 @@ class KafkaConsumerSettings:
     """Kafka Consumer Settings.
 
     Attributes:
-        consumer_id (int): Kafka consumer ID.
         bootstrap_servers (str): Kafka bootstrap servers.
         consumer_group (str): Kafka consumer group ID.
         topic_name (str): Kafka topic name.
@@ -16,7 +15,6 @@ class KafkaConsumerSettings:
 
     def __init__(
         self,
-        consumer_id: int,
         bootstrap_servers: str,
         consumer_group: str,
         topic_name: str,
@@ -27,7 +25,6 @@ class KafkaConsumerSettings:
         """Initialize the KafkaConsumerSettings
 
         Args:
-            consumer_id (int): Kafka consumer ID.
             bootstrap_servers (str): Kafka bootstrap servers.
             consumer_group (str): Kafka consumer group ID.
             topic_name (str): Kafka topic name.
@@ -35,10 +32,6 @@ class KafkaConsumerSettings:
             max_poll_interval_ms (int): Maximum poll interval in milliseconds. Defaults to 300000.
             auto_offset_reset (str): Auto offset reset policy. Defaults to "earliest".  Accepted values are "earliest", "latest", and "none".
         """
-
-        if consumer_id < 0:
-            raise ValueError("Invalid consumer ID")
-
         if not bootstrap_servers or bootstrap_servers.strip() == "":
             raise ValueError("Bootstrap servers cannot be empty")
 
@@ -57,7 +50,6 @@ class KafkaConsumerSettings:
         if auto_offset_reset not in ["earliest", "latest", "none"]:
             raise ValueError("Invalid auto offset reset value")
 
-        self.consumer_id = consumer_id
         self.bootstrap_servers = bootstrap_servers
         self.consumer_group = consumer_group
         self.topic_name = topic_name

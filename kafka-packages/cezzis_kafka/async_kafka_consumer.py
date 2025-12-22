@@ -193,7 +193,6 @@ async def spawn_consumers_async(
         # Create processor instance using factory
         processor = factory_type.CreateNew(
             kafka_settings=KafkaConsumerSettings(
-                consumer_id=i,
                 bootstrap_servers=bootstrap_servers,
                 consumer_group=consumer_group,
                 topic_name=topic_name,
