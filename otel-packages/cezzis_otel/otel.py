@@ -12,7 +12,7 @@ from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExport
 from opentelemetry.propagate import inject
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
-from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.resources import Attributes, Resource
 from opentelemetry.sdk.trace import TracerProvider as TraceProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -27,6 +27,7 @@ def initialize_otel(
     settings: OTelSettings,
     configure_tracing: Optional[Callable[[TraceProvider], None]] = None,
     configure_logging: Optional[Callable[[LoggerProvider], None]] = None,
+    resource_attributes: Optional[Attributes] = None,
 ) -> None:
     """Initialize OpenTelemetry tracing and logging.
 
@@ -34,6 +35,7 @@ def initialize_otel(
         settings (OTelSettings): The OpenTelemetry settings for configuration.
         configure_tracing (Optional[Callable[[TraceProvider], None]]): A callback function to configure the trace provider.
         configure_logging (Optional[Callable[[LoggerProvider], None]]): A callback function to configure the log provider.
+        resource_attributes (Optional[Attributes]): Additional resource attributes to include.
 
     Returns:
         None
@@ -48,6 +50,7 @@ def initialize_otel(
             "service.instance.id": socket.gethostname(),
             "service.version": settings.service_version,
             "deployment.environment": settings.environment,
+            **(resource_attributes or {}),
         }
     )
 
