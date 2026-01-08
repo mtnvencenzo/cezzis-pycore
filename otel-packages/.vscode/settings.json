@@ -10,6 +10,19 @@
       "*.py": "$(capture).py.http, $(capture)_test.py, $(capture).pyi",
       "requirements.txt": "requirements-*.txt"
     },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true,
+        "**/py-env": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.ruff_cache": true,
+        "**/.mypy_cache": true
+    },
     "files.watcherExclude": {
         "**/.git/objects/**": true,
         "**/.git/subtree-cache/**": true,
@@ -20,8 +33,6 @@
         "**/.ruff_cache/**": true
     },
     "python-envs.defaultEnvManager": "ms-python.python:venv",
-    // "python.defaultInterpreterPath": ".venv/Scripts/python.exe", // Adjust path for macOS/Linux if needed
-    // "python.terminal.activateEnvironment": true,
     "python-envs.pythonProjects": [
         {
             "path": "",
@@ -29,12 +40,4 @@
             "packageManager": "ms-python.python:pip"
         }
     ],
-    // "[python]": {
-    //     "editor.formatOnSave": true,
-    //     "editor.defaultFormatter": "charliermarsh.ruff",
-    //     "editor.codeActionsOnSave": {
-    //         "source.fixAll.ruff": "explicit",
-    //         "source.organizeImports.ruff": "explicit"
-    //     }
-    // }
 }
