@@ -6,6 +6,7 @@ from typing import Protocol
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
+
 class IOAuthTokenProvider(Protocol):
     """Protocol for OAuth token providers."""
 
@@ -20,14 +21,7 @@ class OAuthTokenProvider(IOAuthTokenProvider):
     Handles token caching and automatic refresh.
     """
 
-    def __init__(
-        self,
-        domain: str,
-        client_id: str,
-        client_secret: str,
-        audience: str,
-        scope: str
-    ):
+    def __init__(self, domain: str, client_id: str, client_secret: str, audience: str, scope: str):
         self._domain = domain
         self._client_id = client_id
         self._client_secret = client_secret

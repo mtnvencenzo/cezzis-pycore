@@ -6,6 +6,7 @@ from jose import JWTError, jwt
 
 _logger = logging.getLogger("oauth_verification")
 
+
 class TokenVerificationError(Exception):
     """Exception raised when token verification fails."""
 
@@ -15,13 +16,7 @@ class TokenVerificationError(Exception):
 class OAuth2TokenVerifier:
     """Verifies OAuth2 JWT tokens from OAuth."""
 
-    def __init__(
-        self,
-        domain: str,
-        audience: str,
-        algorithms: list[str],
-        issuer: str
-    ):
+    def __init__(self, domain: str, audience: str, algorithms: list[str], issuer: str):
         self._domain = domain
         self._audience = audience
         self._algorithms = algorithms
