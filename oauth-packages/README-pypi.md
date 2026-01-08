@@ -1,36 +1,35 @@
-# Cezzis Kafka
+# Cezzis OAuth
 
 [![Python Version](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![PyPI version](https://img.shields.io/pypi/v/cezzis-kafka.svg)](https://pypi.org/project/cezzis-kafka/)
-[![CI/CD](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-kafka-cicd.yaml/badge.svg)](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-kafka-cicd.yaml)
+[![PyPI version](https://img.shields.io/pypi/v/cezzis-oauth.svg)](https://pypi.org/project/cezzis-oauth/)
+[![CI/CD](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-oauth-cicd.yaml/badge.svg)](https://github.com/mtnvencenzo/cezzis-pycore/actions/workflows/cezzis-oauth-cicd.yaml)
 
-A comprehensive, production-ready Python library for Apache Kafka. Provides both high-performance **message consumption** and **reliable message publishing** with enterprise-grade features including built-in retry mechanisms, delivery tracking, and comprehensive error handling.
+A lightweight, production-ready Python library for OAuth 2.0 authentication. Provides both **token acquisition** and **JWT verification** with enterprise-grade features including automatic token caching, refresh management, JWKS-based verification, and scope validation.
 
 ## 🚀 Installation
 
-Install `cezzis-kafka` from PyPI:
+Install `cezzis-oauth` from PyPI:
 
 ```bash
-pip install cezzis-kafka
+pip install cezzis-oauth
 ```
 
 Or using Poetry:
 
 ```bash
-poetry add cezzis-kafka
+poetry add cezzis-oauth
 ```
 
 ## 📋 Requirements
 
 - Python 3.12 or higher
-- Apache Kafka cluster (local or remote)
 
 ## 📖 Documentation & Examples
 
 Complete documentation, examples, and guides are available in the GitHub repository:
 
-[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/kafka-packages/README.md)
+[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/oauth-packages/README.md)
 
 
 ## 📄 License

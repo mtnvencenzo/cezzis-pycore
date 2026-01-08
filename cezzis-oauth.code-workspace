@@ -1,0 +1,19 @@
+{
+	"folders": [
+		{
+			"name": ".github",
+			"path": ".github"
+		},
+		{
+			"name": "oauth-packages",
+			"path": "oauth-packages"
+		}
+	],
+	"settings": {
+		"dotnet.defaultSolution": "disable",
+		"yaml.schemas": {
+			"https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+		},
+		"python-envs.defaultEnvManager": "ms-python.python:venv"
+	}
+}

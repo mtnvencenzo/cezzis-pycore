@@ -7,7 +7,7 @@ shell:
 	poetry shell
 
 build:
-	poetry run stubgen -p cezzis_kafka -o . && poetry build
+	poetry run stubgen -p cezzis_oauth -o . && poetry build
 
 ruff-check:
 	poetry run ruff check --fix . --config .ruff.toml
@@ -19,7 +19,7 @@ test:
 	poetry run pytest test/
 
 coverage:
-	poetry run pytest -v --cov=cezzis_kafka --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
+	poetry run pytest -v --cov=cezzis_oauth --cov-report=xml:coverage.xml --cov-report=term --junitxml=pytest-results.xml
 
 standards:
 	@make ruff-check
