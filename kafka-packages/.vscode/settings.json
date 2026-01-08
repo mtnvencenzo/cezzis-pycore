@@ -10,15 +10,6 @@
       "*.py": "$(capture).py.http, $(capture)_test.py, $(capture).pyi",
       "requirements.txt": "requirements-*.txt"
     },
-    "files.watcherExclude": {
-        "**/.git/objects/**": true,
-        "**/.git/subtree-cache/**": true,
-        "**/node_modules/**": true,
-        "**/.venv/**": true,
-        "**/py-env/**": true,
-        "**/.pytest_cache/**": true,
-        "**/.ruff_cache/**": true
-    },
     "files.exclude": {
         "**/.git": true,
         "**/.svn": true,
@@ -31,6 +22,15 @@
         "**/.pytest_cache": true,
         "**/.ruff_cache": true,
         "**/.mypy_cache": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.venv/**": true,
+        "**/py-env/**": true,
+        "**/.pytest_cache/**": true,
+        "**/.ruff_cache/**": true
     },
     "python-envs.defaultEnvManager": "ms-python.python:venv",
     "python-envs.pythonProjects": [
