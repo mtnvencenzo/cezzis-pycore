@@ -108,15 +108,15 @@ def _wrap_function(func: Callable, required_scopes: list[str], oauth_config: OAu
 
             _logger.info(f"OAuth authorization successful for subject: {payload.get('sub', 'unknown')}")
 
-            # Call the original function
-            return await func(*args, **kwargs)
-
         except TokenVerificationError as e:
             _logger.warning(f"OAuth authorization failed: {e}")
             raise HTTPException(status_code=403, detail=str(e))
         except Exception as e:
             _logger.error(f"Unexpected error during OAuth authorization: {e}")
             raise HTTPException(status_code=500, detail="Authorization error")
+
+        # Call the original function
+        return await func(*args, **kwargs)
 
     return wrapper
 
