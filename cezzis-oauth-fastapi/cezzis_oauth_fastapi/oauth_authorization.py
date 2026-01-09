@@ -1,7 +1,7 @@
 import logging
 import os
 from functools import wraps
-from typing import Callable, Union, cast
+from typing import Callable, Union
 
 from cezzis_oauth import (
     OAuth2TokenVerifier,
@@ -59,9 +59,9 @@ def _wrap_function(func: Callable, required_scopes: list[str], oauth_config: OAu
     @wraps(func)
     async def wrapper(*args, **kwargs):
         # Extract the Request object from kwargs
-        request: Request = cast(Request, kwargs.get("_rq"))
+        request: Request | None = kwargs.get("_rq")
 
-        if not request:
+        if request is None:
             _logger.error("Request object not found in function arguments")
             raise HTTPException(status_code=500, detail="Internal server error")
 

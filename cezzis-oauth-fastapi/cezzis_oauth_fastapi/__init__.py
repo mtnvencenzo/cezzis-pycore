@@ -3,7 +3,6 @@
 from cezzis_oauth_fastapi.oauth_authorization import oauth_authorization
 from cezzis_oauth_fastapi.oauth_config import OAuthConfig
 
-
 # Dynamically read version from package metadata
 try:
     from importlib.metadata import version
