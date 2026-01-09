@@ -16,7 +16,7 @@ updates:
 
   # Python dependencies for cezzis-otel
   - package-ecosystem: "pip"
-    directory: "/otel-packages"
+    directory: "/cezzis-otel"
     schedule:
       interval: "weekly"
       day: "monday"

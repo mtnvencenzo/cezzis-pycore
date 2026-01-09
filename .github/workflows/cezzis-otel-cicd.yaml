@@ -1,16 +1,16 @@
-name: cicd-otel-packages
+name: cicd-cezzis-otel
 
 on:
   pull_request:
     branches: [main]
     paths: [
-      otel-packages/**,
+      cezzis-otel/**,
       .github/workflows/cezzis-otel-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      otel-packages/**,
+      cezzis-otel/**,
       .github/workflows/cezzis-otel-cicd.yaml
     ]
 
@@ -47,7 +47,7 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/py-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './otel-packages'
+      working_directory: './cezzis-otel'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
       coverage_source: 'cezzis_otel'
@@ -67,7 +67,7 @@ jobs:
     with:
       python_version: '3.12'
       environment_name: 'prd'
-      working_directory: './otel-packages'
+      working_directory: './cezzis-otel'
       artifact_name: 'cezzis-otel-dist'
       repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
       twine_username: '__token__'

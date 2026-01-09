@@ -229,7 +229,7 @@ shutdown_otel()
 ```bash
 # Clone the repository
 git clone https://github.com/mtnvencenzo/cezzis-pycore.git
-cd cezzis-pycore/otel-packages
+cd cezzis-pycore/cezzis-otel
 
 # Install dependencies
 make install
