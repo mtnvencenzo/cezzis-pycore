@@ -30,7 +30,7 @@ poetry add cezzis-kafka
 
 Complete documentation, examples, and guides are available in the GitHub repository:
 
-[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/kafka-packages/README.md)
+[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/cezzis-kafka/README.md)
 
 
 ## 📄 License

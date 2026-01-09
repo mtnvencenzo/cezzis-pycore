@@ -5,7 +5,7 @@
 			"path": ".github"
 		},
 		{
-			"path": "cezzis-oauth"
+			"path": "cezzis-oauth-fastapi"
 		}
 	],
 	"settings": {

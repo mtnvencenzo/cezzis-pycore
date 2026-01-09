@@ -1,17 +1,17 @@
-name: cicd-cezzis-oauth
+name: cicd-cezzis-oauth-fastapi
 
 on:
   pull_request:
     branches: [main]
     paths: [
-      cezzis-oauth/**,
-      .github/workflows/cezzis-oauth-cicd.yaml
+      cezzis-oauth-fastapi/**,
+      .github/workflows/cezzis-oauth-fastapi-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      cezzis-oauth/**,
-      .github/workflows/cezzis-oauth-cicd.yaml
+      cezzis-oauth-fastapi/**,
+      .github/workflows/cezzis-oauth-fastapi-cicd.yaml
     ]
 
   workflow_dispatch:
@@ -47,17 +47,17 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/py-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './cezzis-oauth'
+      working_directory: './cezzis-oauth-fastapi'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
-      coverage_source: 'cezzis_oauth'
+      coverage_source: 'cezzis_oauth_fastapi'
       upload_artifact: true
-      artifact_name: 'cezzis-oauth-dist'
+      artifact_name: 'cezzis-oauth-fastapi-dist'
       setup_files: ''
       version: ${{ needs.gitVersion.outputs.semVer }}
       generate_stubs: true
       stubs_output_dir: '.'
-      stubs_project_name: 'cezzis_oauth'
+      stubs_project_name: 'cezzis_oauth_fastapi'
 
   publish:
     name: Publish to github packages
@@ -67,8 +67,8 @@ jobs:
     with:
       python_version: '3.12'
       environment_name: 'prd'
-      working_directory: './cezzis-oauth'
-      artifact_name: 'cezzis-oauth-dist'
+      working_directory: './cezzis-oauth-fastapi'
+      artifact_name: 'cezzis-oauth-fastapi-dist'
       repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
       twine_username: '__token__'
       allow_publish: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
