@@ -1,12 +1,13 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 import httpx
 from authlib.integrations.httpx_client import AsyncOAuth2Client
 
 
+@runtime_checkable
 class IOAuthTokenProvider(Protocol):
     """Protocol for OAuth token providers."""
 
