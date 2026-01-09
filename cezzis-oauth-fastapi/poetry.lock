@@ -72,14 +72,14 @@ files = [
 
 [[package]]
 name = "cezzis-oauth"
-version = "0.0.19"
+version = "0.0.20"
 description = "A lightweight, production-ready Python library for OAuth 2.0 authentication. Provides both **token acquisition** and **JWT verification** with enterprise-grade features including automatic token caching, refresh management, JWKS-based verification, and scope validation."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_oauth-0.0.19-py3-none-any.whl", hash = "sha256:00fc7298f57d3884595cd47fca9b8753e37421fd28c0436f117a855efdda00c8"},
-    {file = "cezzis_oauth-0.0.19.tar.gz", hash = "sha256:ce3b86dd529679903cd807dd0d679ceb72ecb3c16740565259b626dc8facedff"},
+    {file = "cezzis_oauth-0.0.20-py3-none-any.whl", hash = "sha256:f933eeeb5bed74b36586fa4c1ae92213392d25a4d13fe4c9b406bc7da1550722"},
+    {file = "cezzis_oauth-0.0.20.tar.gz", hash = "sha256:5915a3c8184d26d048880568f6deb08970796e4afc6ea812b0cb6f8fb88fd951"},
 ]
 
 [package.dependencies]
