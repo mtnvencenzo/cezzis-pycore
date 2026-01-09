@@ -26,8 +26,10 @@ Before you begin, ensure you have the following installed:
 
 ```text
 cezzis-pycore/
-├── kafka-packages/             # Kafka-related Python packages
-├── otel-packages/              # OpenTelemetry-related Python packages
+├── cezzis-oauth/               # Oauth related functionality
+├── cezzis-oauth-fastapi/       # Oauth related functionality specifically for fastapi
+├── cezzis-kafka/               # Kafka related functionality
+├── cezzis-otel/                # OpenTelemetry related functionality
 ├── .github/                    # GitHub workflows and templates
 └── README.md                   # Repository documentation
 ```
@@ -155,7 +157,7 @@ Use our issue chooser:
 A: Follow the [Development Setup](#-development-setup) section above. Each package has its own directory with setup instructions.
 
 **Q: How do I run tests?**
-A: Use `make test` in the respective package directory (e.g., `kafka-packages/`).
+A: Use `make test` in the respective package directory (e.g., `cezzis-kafka/`).
 
 **Q: Which package should I contribute to?**
 A: Check the issue description - it should indicate which package is affected. If unsure, ask in the issue comments.

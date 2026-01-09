@@ -2,7 +2,7 @@ version: 2
 updates:
   # Python dependencies for cezzis-kafka
   - package-ecosystem: "pip"
-    directory: "/kafka-packages"
+    directory: "/cezzis-kafka"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -30,7 +30,7 @@ updates:
 
   # Python dependencies for cezzis-oauth
   - package-ecosystem: "pip"
-    directory: "/oauth-packages"
+    directory: "/cezzis-oauth"
     schedule:
       interval: "weekly"
       day: "monday"

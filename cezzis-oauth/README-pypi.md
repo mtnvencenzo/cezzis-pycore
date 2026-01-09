@@ -29,7 +29,7 @@ poetry add cezzis-oauth
 
 Complete documentation, examples, and guides are available in the GitHub repository:
 
-[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/oauth-packages/README.md)
+[Full Documentation & Examples](https://github.com/mtnvencenzo/cezzis-pycore/blob/main/cezzis-oauth/README.md)
 
 
 ## 📄 License

@@ -5,8 +5,7 @@
 			"path": ".github"
 		},
 		{
-			"name": "otel-packages",
-			"path": "otel-packages"
+			"path": "cezzis-otel"
 		}
 	],
 	"settings": {}

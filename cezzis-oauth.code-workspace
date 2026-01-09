@@ -5,8 +5,7 @@
 			"path": ".github"
 		},
 		{
-			"name": "oauth-packages",
-			"path": "oauth-packages"
+			"path": "cezzis-oauth"
 		}
 	],
 	"settings": {

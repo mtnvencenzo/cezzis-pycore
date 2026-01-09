@@ -1,16 +1,16 @@
-name: cicd-oauth-packages
+name: cicd-cezzis-oauth
 
 on:
   pull_request:
     branches: [main]
     paths: [
-      oauth-packages/**,
+      cezzis-oauth/**,
       .github/workflows/cezzis-oauth-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
-      oauth-packages/**,
+      cezzis-oauth/**,
       .github/workflows/cezzis-oauth-cicd.yaml
     ]
 
@@ -47,7 +47,7 @@ jobs:
     uses: mtnvencenzo/workflows/.github/workflows/py-build.yaml@main
     with:
       python_version: '3.12'
-      working_directory: './oauth-packages'
+      working_directory: './cezzis-oauth'
       ruff_config: '.ruff.toml'
       pytest_args: '-v'
       coverage_source: 'cezzis_oauth'
@@ -67,7 +67,7 @@ jobs:
     with:
       python_version: '3.12'
       environment_name: 'prd'
-      working_directory: './oauth-packages'
+      working_directory: './cezzis-oauth'
       artifact_name: 'cezzis-oauth-dist'
       repository_url: 'https://upload.pypi.org/legacy/' # https://api.github.com/orgs/mtnvencenzo/packages/pypi/upload
       twine_username: '__token__'
