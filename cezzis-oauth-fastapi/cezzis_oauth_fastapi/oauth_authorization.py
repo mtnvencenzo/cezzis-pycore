@@ -13,6 +13,14 @@ from cezzis_oauth_fastapi.oauth_config import OAuthConfig
 
 _logger = logging.getLogger("oauth_authorization")
 
+# Cache verifiers by config to avoid recreating them
+_verifiers: dict[tuple, OAuth2TokenVerifier] = {}
+
+
+def _get_config_key(config: OAuthConfig) -> tuple:
+    """Create a hashable key from OAuthConfig for caching verifiers."""
+    return (config.domain, config.audience, tuple(config.algorithms), config.issuer)
+
 
 def oauth_authorization(scopes: list[str], config_provider: Callable[[], OAuthConfig]):
     """Decorator for OAuth2 authorization with OAuth token verification.
@@ -58,6 +66,8 @@ def _wrap_function(func: Callable, required_scopes: list[str], oauth_config: OAu
 
     @wraps(func)
     async def wrapper(*args, **kwargs):
+        global _verifiers
+
         # Extract the Request object from kwargs
         request: Request | None = kwargs.get("_rq")
 
@@ -79,14 +89,17 @@ def _wrap_function(func: Callable, required_scopes: list[str], oauth_config: OAu
         token = auth_header.replace("Bearer ", "").strip()
 
         try:
-            # Verify the token
-            verifier = OAuth2TokenVerifier(
-                domain=oauth_config.domain,
-                audience=oauth_config.audience,
-                algorithms=oauth_config.algorithms,
-                issuer=oauth_config.issuer,
-            )
+            # Get or create verifier for this config
+            config_key = _get_config_key(oauth_config)
+            if config_key not in _verifiers:
+                _verifiers[config_key] = OAuth2TokenVerifier(
+                    domain=oauth_config.domain,
+                    audience=oauth_config.audience,
+                    algorithms=oauth_config.algorithms,
+                    issuer=oauth_config.issuer,
+                )
 
+            verifier = _verifiers[config_key]
             payload = await verifier.verify_token(token)
 
             # Verify scopes if required

@@ -46,6 +46,17 @@ def mock_request_no_auth():
     return request
 
 
+@pytest.fixture(autouse=True)
+def reset_verifier():
+    """Reset the global _verifiers cache before and after each test."""
+    import sys
+
+    oauth_auth_module = sys.modules["cezzis_oauth_fastapi.oauth_authorization"]
+    oauth_auth_module._verifiers.clear()
+    yield
+    oauth_auth_module._verifiers.clear()
+
+
 @pytest.fixture
 def mock_verifier():
     """Create a mock OAuth2TokenVerifier."""
@@ -264,8 +275,11 @@ class TestOAuthAuthorizationClassDecorator:
         result2 = await router.method_two(_rq=mock_request)
         assert result2 == {"method": "two"}
 
-        # Verify both methods were protected (verifier called twice)
-        assert mock_verifier.call_count == 2
+        # Verify verifier was created once (cached for both methods since they use same config)
+        mock_verifier.assert_called_once()
+        # But verify token was checked for both calls
+        verifier = mock_verifier.return_value
+        assert verifier.verify_token.call_count == 2
 
     @pytest.mark.asyncio
     async def test_class_decorator_skips_private_methods(self, mock_request, mock_verifier):

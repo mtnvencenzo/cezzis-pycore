@@ -5,13 +5,13 @@ on:
     branches: [main]
     paths: [
       cezzis-oauth-fastapi/**,
-      .github/workflows/cezzis-oauth-cicd.yaml
+      .github/workflows/cezzis-oauth-fastapi-cicd.yaml
     ]
   push:
     branches: [main]
     paths: [
       cezzis-oauth-fastapi/**,
-      .github/workflows/cezzis-oauth-cicd-fastapi.yaml
+      .github/workflows/cezzis-oauth-fastapi-cicd.yaml
     ]
 
   workflow_dispatch:
