@@ -1,0 +1,43 @@
+{
+    "dotnet.defaultSolution": "disable",
+    "makefile.configureOnOpen": false,
+    "rest-client.enableTelemetry": false,
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.py": "$(capture).py.http, $(capture)_test.py, $(capture).pyi",
+      "requirements.txt": "requirements-*.txt"
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true,
+        "**/py-env": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.ruff_cache": true,
+        "**/.mypy_cache": true
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.venv/**": true,
+        "**/py-env/**": true,
+        "**/.pytest_cache/**": true,
+        "**/.ruff_cache/**": true
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    "python-envs.pythonProjects": [
+        {
+            "path": "",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ]
+}
