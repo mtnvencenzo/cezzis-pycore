@@ -27,6 +27,7 @@ def generate_openapi_oauth2_scheme(
                     "tokenUrl": f"https://{domain}/oauth/token",
                     "scopes": scopes,
                     "x-usePkce": pkce,
+                    "x-scalar-client-id": client_id or "",
                     "x-defaultClientId": client_id or "",
                 }
             },
