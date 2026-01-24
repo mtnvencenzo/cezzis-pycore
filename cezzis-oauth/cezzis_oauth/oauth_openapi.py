@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Literal
 
 
 def generate_openapi_oauth2_scheme(
@@ -8,6 +8,7 @@ def generate_openapi_oauth2_scheme(
     audience: str,
     scopes: dict[str, str] | None = None,
     pkce: str | None = None,
+    credentials_location: Literal["header", "body"] | None = None,
 ) -> dict[str, dict[str, Any]]:
     """
     Generate OpenAPI OAuth2 scheme definition.
@@ -28,6 +29,7 @@ def generate_openapi_oauth2_scheme(
                     "scopes": scopes,
                     "x-usePkce": pkce,
                     "x-scalar-client-id": client_id or "",
+                    "x-scalar-credentials-location": credentials_location or "body",
                     "x-defaultClientId": client_id or "",
                 }
             },
