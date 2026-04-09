@@ -1,6 +1,6 @@
 [project]
 name = "cezzis_kafka"
-version = "0.0.1"
+version = "0.0.2"
 description = "cezzis-kafka is a lightweight Python library for working with Kafka topics and event streams. It simplifies producing, consuming, and managing messages, enabling seamless integration with distributed systems and real-time data pipelines. Designed for flexibility and ease of use, cezzis-kafka supports both synchronous and asynchronous workflows."
 authors = [
     {name = "mtnvencenzo",email = "rvecchi@gmail.com"}
@@ -25,6 +25,7 @@ dev = [
     "pytest-cov (>=4.0.0,<6.0.0)",
     "ruff (>=0.14.3,<0.15.0)",
     "pytest-mock (>=3.15.1,<4.0.0)",
+    "pytest-asyncio (>=0.25.0,<1.0.0)",
     "mypy (>=1.18.2,<2.0.0)"
 ]
 

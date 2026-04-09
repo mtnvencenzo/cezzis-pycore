@@ -1,10 +1,11 @@
 import asyncio
 import logging
 import os
+import random
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Type, TypeVar
 
-from confluent_kafka import Consumer, KafkaError, Message
+from confluent_kafka import Consumer, KafkaError, KafkaException, Message
 
 from cezzis_kafka.iasync_kafka_message_processor import IAsyncKafkaMessageProcessor
 from cezzis_kafka.kafka_consumer_settings import KafkaConsumerSettings
@@ -23,36 +24,119 @@ _kafka_thread_pool = ThreadPoolExecutor(max_workers=_DEFAULT_THREAD_POOL_SIZE, t
 
 
 async def start_consumer_async(processor: IAsyncKafkaMessageProcessor) -> None:
-    """Start async Kafka consumer.
+    """Start async Kafka consumer with automatic reconnection on failure.
+
+    If the consumer fails to connect or encounters an error during polling,
+    it will automatically retry with exponential backoff. Reconnection settings
+    are configured via KafkaConsumerSettings.
 
     Args:
         processor: Async message processor implementation
     """
-    logger.info("Starting async Kafka consumer...")
+    settings = processor.kafka_settings()
+    attempt = 0
 
-    # Create consumer in thread pool since kafka client is synchronous
-    consumer = await _create_consumer_async(processor)
-    if consumer is None:
-        return
+    while True:
+        try:
+            logger.info(
+                "Starting async Kafka consumer...",
+                extra={
+                    "messaging.kafka.bootstrap_servers": settings.bootstrap_servers,
+                    "messaging.kafka.consumer_group": settings.consumer_group,
+                    "messaging.kafka.topic_name": settings.topic_name,
+                    "messaging.kafka.reconnect_attempt": attempt,
+                },
+            )
 
-    try:
-        await _subscribe_consumer_async(consumer, processor)
-        await _start_polling_async(consumer, processor)
+            consumer = await _create_consumer_async(processor)
+            if consumer is None:
+                raise _ConsumerCreationError("Failed to create Kafka consumer")
 
-    except asyncio.CancelledError:
-        logger.info("Async consumer cancelled, shutting down...")
-        raise
-    except Exception:
-        logger.error("Unexpected error in async consumer", exc_info=True)
-        raise
-    finally:
-        await _close_consumer_async(consumer, processor)
+            try:
+                await _subscribe_consumer_async(consumer, processor)
+                await _start_polling_async(consumer, processor)
+            finally:
+                await _close_consumer_async(consumer, processor)
+
+        except asyncio.CancelledError:
+            logger.info("Async consumer cancelled, shutting down...")
+            raise
+
+        except Exception as e:
+            attempt += 1
+
+            if settings.reconnect_max_retries > 0 and attempt >= settings.reconnect_max_retries:
+                logger.error(
+                    "Max reconnect retries reached, giving up",
+                    extra={
+                        "messaging.kafka.bootstrap_servers": settings.bootstrap_servers,
+                        "messaging.kafka.consumer_group": settings.consumer_group,
+                        "messaging.kafka.topic_name": settings.topic_name,
+                        "messaging.kafka.reconnect_attempt": attempt,
+                        "messaging.kafka.reconnect_max_retries": settings.reconnect_max_retries,
+                        "error": str(e),
+                    },
+                )
+                raise
+
+            backoff = _calculate_backoff(
+                attempt, settings.reconnect_backoff_seconds, settings.reconnect_backoff_max_seconds
+            )
+
+            logger.warning(
+                "Kafka consumer failed, reconnecting after backoff",
+                extra={
+                    "messaging.kafka.bootstrap_servers": settings.bootstrap_servers,
+                    "messaging.kafka.consumer_group": settings.consumer_group,
+                    "messaging.kafka.topic_name": settings.topic_name,
+                    "messaging.kafka.reconnect_attempt": attempt,
+                    "messaging.kafka.reconnect_backoff_seconds": backoff,
+                    "error": str(e),
+                },
+            )
+
+            await asyncio.sleep(backoff)
+
+
+class _ConsumerCreationError(Exception):
+    """Internal error raised when consumer creation fails to trigger retry logic."""
+
+    pass
+
+
+def _calculate_backoff(attempt: int, base_seconds: float, max_seconds: float) -> float:
+    """Calculate exponential backoff with jitter.
+
+    Args:
+        attempt: Current retry attempt number (1-based).
+        base_seconds: Initial backoff in seconds.
+        max_seconds: Maximum backoff cap in seconds.
+
+    Returns:
+        Backoff duration in seconds with jitter applied.
+    """
+    exponential = min(base_seconds * (2 ** (attempt - 1)), max_seconds)
+    return random.uniform(exponential / 2, exponential)  # noqa: S311
 
 
 async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Optional[Consumer]:
     """Create Kafka consumer asynchronously."""
 
     await processor.consumer_creating()
+
+    def _error_cb(err: KafkaError) -> None:
+        """Callback for broker-level errors from confluent-kafka."""
+        logger.error(
+            "Kafka broker error",
+            extra={
+                "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
+                "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
+                "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
+                "messaging.kafka.error_code": err.code(),
+                "messaging.kafka.error_name": err.name(),
+                "error": str(err),
+            },
+        )
 
     def create_consumer():
         try:
@@ -62,6 +146,7 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
                     "group.id": processor.kafka_settings().consumer_group,
                     "auto.offset.reset": processor.kafka_settings().auto_offset_reset,
                     "max.poll.interval.ms": processor.kafka_settings().max_poll_interval_ms,
+                    "error_cb": _error_cb,
                 }
             )
             return consumer
@@ -114,7 +199,19 @@ async def _start_polling_async(consumer: Consumer, processor: IAsyncKafkaMessage
                 break
 
             # Poll for message in thread pool to avoid blocking event loop
-            msg = await loop.run_in_executor(_kafka_thread_pool, poll_message, 1.0)
+            try:
+                msg = await loop.run_in_executor(_kafka_thread_pool, poll_message, 1.0)
+            except KafkaException as e:
+                logger.error(
+                    "Fatal Kafka error during poll, consumer will reconnect",
+                    extra={
+                        "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
+                        "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
+                        "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
+                        "error": str(e),
+                    },
+                )
+                raise
 
             if msg is None:
                 # No message received, continue polling
