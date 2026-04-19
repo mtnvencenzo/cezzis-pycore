@@ -32,12 +32,5 @@
         "**/.pytest_cache/**": true,
         "**/.ruff_cache/**": true
     },
-    "python-envs.defaultEnvManager": "ms-python.python:venv",
-    "python-envs.pythonProjects": [
-        {
-            "path": "",
-            "envManager": "ms-python.python:venv",
-            "packageManager": "ms-python.python:pip"
-        }
-    ]
+    "python-envs.defaultEnvManager": "ms-python.python:venv"
 }
