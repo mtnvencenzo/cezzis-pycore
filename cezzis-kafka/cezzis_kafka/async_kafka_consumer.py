@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import random
@@ -17,6 +18,7 @@ TAsyncProcessor = TypeVar("TAsyncProcessor", bound=IAsyncKafkaMessageProcessor)
 
 # Configurable thread pool size for production flexibility
 _DEFAULT_THREAD_POOL_SIZE = int(os.getenv("KAFKA_ASYNC_THREAD_POOL_SIZE", "16"))
+_DEFAULT_KAFKA_STATS_INTERVAL_MS = int(os.getenv("KAFKA_STATS_INTERVAL_MS", "10000"))
 
 # Shared thread pool for all Kafka async operations - production optimization
 # Sized to handle multiple consumer groups and topics efficiently
@@ -123,6 +125,7 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
     """Create Kafka consumer asynchronously."""
 
     await processor.consumer_creating()
+    connected_brokers: set[str] = set()
 
     def _error_cb(err: KafkaError) -> None:
         """Callback for broker-level errors from confluent-kafka."""
@@ -138,6 +141,40 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
             },
         )
 
+    def _stats_cb(stats_json: str) -> None:
+        """Callback for broker statistics from confluent-kafka."""
+        try:
+            stats = json.loads(stats_json)
+        except json.JSONDecodeError:
+            logger.debug("Failed to parse Kafka statistics payload", exc_info=True)
+            return
+
+        brokers = stats.get("brokers", {})
+        if not isinstance(brokers, dict):
+            return
+
+        for broker_name, broker_stats in brokers.items():
+            if not isinstance(broker_stats, dict):
+                continue
+
+            broker_state = broker_stats.get("state")
+
+            if broker_state == "UP" and broker_name not in connected_brokers:
+                connected_brokers.add(broker_name)
+                logger.info(
+                    "Kafka broker connection established",
+                    extra={
+                        "messaging.kafka.bootstrap_servers": processor.kafka_settings().bootstrap_servers,
+                        "messaging.kafka.consumer_group": processor.kafka_settings().consumer_group,
+                        "messaging.kafka.topic_name": processor.kafka_settings().topic_name,
+                        "messaging.kafka.broker_name": broker_name,
+                        "messaging.kafka.broker_state": broker_state,
+                        "messaging.kafka.broker_node_id": broker_stats.get("nodeid"),
+                    },
+                )
+            elif broker_state != "UP" and broker_name in connected_brokers:
+                connected_brokers.remove(broker_name)
+
     def create_consumer():
         try:
             consumer = Consumer(
@@ -146,7 +183,9 @@ async def _create_consumer_async(processor: IAsyncKafkaMessageProcessor) -> Opti
                     "group.id": processor.kafka_settings().consumer_group,
                     "auto.offset.reset": processor.kafka_settings().auto_offset_reset,
                     "max.poll.interval.ms": processor.kafka_settings().max_poll_interval_ms,
+                    "statistics.interval.ms": _DEFAULT_KAFKA_STATS_INTERVAL_MS,
                     "error_cb": _error_cb,
+                    "stats_cb": _stats_cb,
                 }
             )
             return consumer

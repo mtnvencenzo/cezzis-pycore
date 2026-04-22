@@ -1,6 +1,7 @@
 """Unit tests for async_kafka_consumer module — reconnection and retry logic."""
 
 import asyncio
+import json
 from typing import Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -10,6 +11,7 @@ from confluent_kafka import Consumer, KafkaException, Message
 from cezzis_kafka.async_kafka_consumer import (
     _calculate_backoff,
     _ConsumerCreationError,
+    _create_consumer_async,
     start_consumer_async,
 )
 from cezzis_kafka.iasync_kafka_message_processor import IAsyncKafkaMessageProcessor
@@ -283,3 +285,45 @@ class TestStartPollingKafkaException:
             with patch.object(loop, "run_in_executor", side_effect=raise_kafka_exception):
                 with pytest.raises(KafkaException):
                     await _start_polling_async(mock_consumer, processor)
+
+
+class TestConsumerStatsLogging:
+    """Tests for stats callback broker connection logging."""
+
+    @pytest.mark.asyncio
+    async def test_logs_info_when_broker_state_transitions_to_up(self, processor: MockAsyncProcessor) -> None:
+        """Stats callback should emit a connection-established info log for broker UP state."""
+        mock_consumer = MagicMock(spec=Consumer)
+        captured_config = {}
+
+        def consumer_ctor(config):
+            captured_config.update(config)
+            return mock_consumer
+
+        async def run_immediately(_executor, func, *args):
+            return func(*args)
+
+        loop = asyncio.get_event_loop()
+
+        with (
+            patch("cezzis_kafka.async_kafka_consumer.Consumer", side_effect=consumer_ctor),
+            patch.object(loop, "run_in_executor", side_effect=run_immediately),
+            patch("cezzis_kafka.async_kafka_consumer.logger.info") as mock_info,
+        ):
+            await _create_consumer_async(processor)
+
+            stats_cb = captured_config["stats_cb"]
+            stats_cb(
+                json.dumps(
+                    {
+                        "brokers": {
+                            "broker-1:19092/1": {
+                                "state": "UP",
+                                "nodeid": 1,
+                            }
+                        }
+                    }
+                )
+            )
+
+            assert any(call.args[0] == "Kafka broker connection established" for call in mock_info.call_args_list)
